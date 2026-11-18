@@ -1,0 +1,362 @@
+import type { Db } from '../connection'
+import type { DownloadState, ParsedEpisode } from '@shared/types'
+
+export interface EpisodeInsert {
+  podcastId: number
+  guid: string
+  title: string
+  description?: string | null
+  descriptionHtml?: string | null
+  mediaUrl?: string | null
+  mediaType?: string | null
+  mediaLength?: number | null
+  durationSecs?: number | null
+  releaseDate?: number | null
+  episodeNumber?: number | null
+  seasonNumber?: number | null
+  artworkUrl?: string | null
+  chaptersUrl?: string | null
+  isImported?: boolean
+}
+
+export class EpisodeRepo {
+  constructor(private readonly db: Db) {}
+
+  /**
+   * Inserts episodes, ignoring any whose guid already exists for the podcast.
+   * This is what makes a feed re-check idempotent.
+   *
+   * Returns the ids of the genuinely new rows.
+   */
+  insertMany(podcastId: number, episodes: ParsedEpisode[]): number[] {
+    if (episodes.length === 0) return []
+
+    const now = Date.now()
+    const insert = this.db.prepare(
+      `INSERT OR IGNORE INTO episodes
+         (podcast_id, guid, title, description, description_html, media_url, media_type,
+          media_length, duration_secs, release_date, episode_number, season_number,
+          artwork_url, chapters_url, created_at, updated_at)
+       VALUES (@podcastId, @guid, @title, @description, @descriptionHtml, @mediaUrl, @mediaType,
+               @mediaLength, @durationSecs, @releaseDate, @episodeNumber, @seasonNumber,
+               @artworkUrl, @chaptersUrl, @now, @now)`
+    )
+
+    const run = this.db.transaction((rows: ParsedEpisode[]) => {
+      const ids: number[] = []
+      for (const ep of rows) {
+        const info = insert.run({
+          podcastId,
+          guid: ep.guid,
+          title: ep.title,
+          description: ep.description ?? null,
+          descriptionHtml: ep.descriptionHtml ?? null,
+          mediaUrl: ep.mediaUrl ?? null,
+          mediaType: ep.mediaType ?? null,
+          mediaLength: ep.mediaLength ?? null,
+          durationSecs: ep.durationSecs ?? null,
+          releaseDate: ep.releaseDate ?? null,
+          episodeNumber: ep.episodeNumber ?? null,
+          seasonNumber: ep.seasonNumber ?? null,
+          artworkUrl: ep.artworkUrl ?? null,
+          chaptersUrl: ep.chaptersUrl ?? null,
+          now
+        })
+        if (info.changes > 0) ids.push(Number(info.lastInsertRowid))
+      }
+      return ids
+    })
+
+    return run(episodes)
+  }
+
+  /** Inserts a single imported episode, returning its id. */
+  insertImported(input: EpisodeInsert): number {
+    const now = Date.now()
+    const info = this.db
+      .prepare(
+        `INSERT OR IGNORE INTO episodes
+           (podcast_id, guid, title, description, description_html, media_url, media_type,
+            media_length, duration_secs, release_date, episode_number, season_number,
+            artwork_url, file_path, file_size, download_state, duration_known, is_imported,
+            created_at, updated_at)
+         VALUES (@podcastId, @guid, @title, @description, @descriptionHtml, @mediaUrl, @mediaType,
+                 @mediaLength, @durationSecs, @releaseDate, @episodeNumber, @seasonNumber,
+                 @artworkUrl, NULL, NULL, 'done', @durationKnown, 1, @now, @now)`
+      )
+      .run({
+        podcastId: input.podcastId,
+        guid: input.guid,
+        title: input.title,
+        description: input.description ?? null,
+        descriptionHtml: input.descriptionHtml ?? null,
+        mediaUrl: input.mediaUrl ?? null,
+        mediaType: input.mediaType ?? null,
+        mediaLength: input.mediaLength ?? null,
+        durationSecs: input.durationSecs ?? null,
+        releaseDate: input.releaseDate ?? null,
+        episodeNumber: input.episodeNumber ?? null,
+        seasonNumber: input.seasonNumber ?? null,
+        artworkUrl: input.artworkUrl ?? null,
+        durationKnown: input.durationSecs ?? null,
+        now
+      })
+    return Number(info.lastInsertRowid)
+  }
+
+  /** Links a local file to an existing episode (legacy import match). */
+  attachFile(id: number, filePath: string, fileSize: number, durationSecs: number | null): void {
+    this.db
+      .prepare(
+        `UPDATE episodes SET
+           file_path = @filePath,
+           file_size = @fileSize,
+           duration_secs = COALESCE(@durationSecs, duration_secs),
+           duration_known = COALESCE(@durationSecs, duration_known),
+           download_state = 'done',
+           download_error = NULL,
+           is_imported = 1,
+           updated_at = @now
+         WHERE id = @id`
+      )
+      .run({ id, filePath, fileSize, durationSecs, now: Date.now() })
+  }
+
+  getById(id: number): (EpisodeRow & { podcast_title: string }) | null {
+    const row = this.db
+      .prepare(
+        `SELECT e.*, p.title AS podcast_title FROM episodes e
+         JOIN podcasts p ON p.id = e.podcast_id WHERE e.id = ?`
+      )
+      .get(id) as (EpisodeRow & { podcast_title: string }) | undefined
+    return row ?? null
+  }
+
+  getFilePath(id: number): string | null {
+    const row = this.db.prepare('SELECT file_path FROM episodes WHERE id = ?').get(id) as
+      | { file_path: string | null }
+      | undefined
+    return row?.file_path ?? null
+  }
+
+  findByFilePath(filePath: string): { id: number } | null {
+    const row = this.db.prepare('SELECT id FROM episodes WHERE file_path = ?').get(filePath) as
+      | { id: number }
+      | undefined
+    return row ?? null
+  }
+
+  /** Finds an episode by a normalised title within a podcast. */
+  findByNormalisedTitle(podcastId: number, normalisedTitle: string): { id: number } | null {
+    const row = this.db
+      .prepare(
+        `SELECT id FROM episodes
+         WHERE podcast_id = @podcastId
+           AND LOWER(TRIM(title)) = @normalisedTitle
+         LIMIT 1`
+      )
+      .get({ podcastId, normalisedTitle }) as { id: number } | undefined
+    return row ?? null
+  }
+
+  setPlayed(id: number, played: boolean): void {
+    // Marking played also clears the resume point, so replaying starts over.
+    this.db
+      .prepare('UPDATE episodes SET played = ?, play_position = 0, updated_at = ? WHERE id = ?')
+      .run(played ? 1 : 0, Date.now(), id)
+  }
+
+  /** Marks many episodes played/unplayed in a single transaction. */
+  setPlayedMany(ids: number[], played: boolean): void {
+    if (ids.length === 0) return
+    const now = Date.now()
+    const update = this.db.prepare(
+      'UPDATE episodes SET played = ?, play_position = 0, updated_at = ? WHERE id = ?'
+    )
+    const run = this.db.transaction((list: number[]) => {
+      for (const id of list) update.run(played ? 1 : 0, now, id)
+    })
+    run(ids)
+  }
+
+  /** Marks every episode of a podcast played/unplayed. */
+  setPlayedForPodcast(podcastId: number, played: boolean, onlyUnplayed: boolean): void {
+    const now = Date.now()
+    if (played && onlyUnplayed) {
+      this.db
+        .prepare(
+          'UPDATE episodes SET played = 1, play_position = 0, updated_at = ? WHERE podcast_id = ? AND played = 0'
+        )
+        .run(now, podcastId)
+      return
+    }
+    this.db
+      .prepare(
+        'UPDATE episodes SET played = ?, play_position = 0, updated_at = ? WHERE podcast_id = ?'
+      )
+      .run(played ? 1 : 0, now, podcastId)
+  }
+
+  /**
+   * The next unplayed episode to play after `currentId`, for continuous
+   * playback. Follows the default (newest-first) list order: the closest older
+   * unplayed episode, wrapping around to the newest when there is none.
+   */
+  nextUnplayedAfter(
+    releaseDate: number | null,
+    currentId: number,
+    podcastId: number | null
+  ): number | null {
+    const podcastClause = podcastId != null ? ' AND podcast_id = @podcastId' : ''
+
+    const olderParams: Record<string, unknown> = {
+      currentId,
+      releaseDate: releaseDate ?? Number.MAX_SAFE_INTEGER
+    }
+    if (podcastId != null) olderParams.podcastId = podcastId
+
+    const older = this.db
+      .prepare(
+        `SELECT id FROM episodes
+         WHERE played = 0 AND id != @currentId${podcastClause}
+           AND COALESCE(release_date, 0) < @releaseDate
+         ORDER BY COALESCE(release_date, 0) DESC, id DESC
+         LIMIT 1`
+      )
+      .get(olderParams) as { id: number } | undefined
+    if (older) return older.id
+
+    const wrapParams: Record<string, unknown> = { currentId }
+    if (podcastId != null) wrapParams.podcastId = podcastId
+
+    const wrapped = this.db
+      .prepare(
+        `SELECT id FROM episodes
+         WHERE played = 0 AND id != @currentId AND media_url IS NOT NULL${podcastClause}
+         ORDER BY COALESCE(release_date, 0) DESC, id DESC
+         LIMIT 1`
+      )
+      .get(wrapParams) as { id: number } | undefined
+    return wrapped?.id ?? null
+  }
+
+  /** Reads the chapter document URL advertised by the feed, if any. */
+  getChaptersUrl(id: number): string | null {
+    const row = this.db.prepare('SELECT chapters_url FROM episodes WHERE id = ?').get(id) as
+      | { chapters_url: string | null }
+      | undefined
+    return row?.chapters_url ?? null
+  }
+
+  setPlayPosition(id: number, position: number, duration: number): void {
+    this.db
+      .prepare(
+        `UPDATE episodes SET
+           play_position = ?,
+           duration_known = COALESCE(?, duration_known),
+           updated_at = ?
+         WHERE id = ?`
+      )
+      .run(position, duration > 0 ? duration : null, Date.now(), id)
+  }
+
+  setDownloadState(id: number, state: DownloadState, error: string | null = null): void {
+    this.db
+      .prepare(
+        'UPDATE episodes SET download_state = ?, download_error = ?, updated_at = ? WHERE id = ?'
+      )
+      .run(state, error, Date.now(), id)
+  }
+
+  setFilePath(id: number, filePath: string | null, fileSize: number | null): void {
+    this.db
+      .prepare('UPDATE episodes SET file_path = ?, file_size = ?, updated_at = ? WHERE id = ?')
+      .run(filePath, fileSize, Date.now(), id)
+  }
+
+  /** Distinct years that have episodes, newest first - drives the year filter. */
+  listYears(): number[] {
+    const rows = this.db
+      .prepare(
+        `SELECT DISTINCT CAST(strftime('%Y', release_date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS y
+         FROM episodes
+         WHERE release_date IS NOT NULL
+         ORDER BY y DESC`
+      )
+      .all() as { y: number }[]
+    return rows.map((r) => r.y).filter((y) => Number.isFinite(y))
+  }
+
+  /** Every episode of a podcast, newest first. */
+  listForPodcast(podcastId: number): EpisodeRow[] {
+    return this.db
+      .prepare(
+        `SELECT * FROM episodes
+         WHERE podcast_id = ?
+         ORDER BY COALESCE(release_date, 0) DESC, id DESC`
+      )
+      .all(podcastId) as EpisodeRow[]
+  }
+
+  /** Episode ids of a podcast that have a media URL and are not downloaded. */
+  listDownloadableIds(podcastId: number): number[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id FROM episodes
+         WHERE podcast_id = ?
+           AND media_url IS NOT NULL
+           AND download_state != 'done'`
+      )
+      .all(podcastId) as { id: number }[]
+    return rows.map((r) => r.id)
+  }
+
+  /**
+   * Every episode's id and title, for the importer's in-memory matching index.
+   * A single query beats a lookup per file per podcast.
+   */
+  listForMatching(): { id: number; podcastId: number; title: string }[] {
+    const rows = this.db.prepare('SELECT id, podcast_id, title FROM episodes').all() as {
+      id: number
+      podcast_id: number
+      title: string
+    }[]
+    return rows.map((r) => ({ id: r.id, podcastId: r.podcast_id, title: r.title }))
+  }
+
+  /** Ids of downloaded episodes for a podcast, used for bulk deletion. */
+  listDownloadedIdsForPodcast(podcastId: number): number[] {
+    const rows = this.db
+      .prepare("SELECT id FROM episodes WHERE podcast_id = ? AND download_state = 'done'")
+      .all(podcastId) as { id: number }[]
+    return rows.map((r) => r.id)
+  }
+}
+
+export interface EpisodeRow {
+  id: number
+  podcast_id: number
+  guid: string
+  title: string
+  description: string | null
+  description_html: string | null
+  media_url: string | null
+  media_type: string | null
+  media_length: number | null
+  duration_secs: number | null
+  release_date: number | null
+  episode_number: number | null
+  season_number: number | null
+  artwork_url: string | null
+  file_path: string | null
+  file_size: number | null
+  download_state: string
+  download_error: string | null
+  played: number
+  play_position: number
+  duration_known: number | null
+  is_imported: number
+  created_at: number
+  updated_at: number
+}
+

@@ -1,0 +1,35 @@
+appId: com.jtunes.app
+productName: j-Tunes
+directories:
+  buildResources: resources
+  output: release
+files:
+  - out/**/*
+  - resources/**/*
+  - package.json
+asarUnpack:
+  - '**/*.node'
+win:
+  executableName: j-Tunes
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  createDesktopShortcut: true
+  shortcutName: j-Tunes
+mac:
+  category: public.app-category.music
+  target:
+    - dmg
+    - zip
+  extendInfo:
+    NSMicrophoneUsageDescription: j-Tunes does not record audio.
+linux:
+  category: AudioVideo
+  target:
+    - AppImage
+    - deb
+npmRebuild: false

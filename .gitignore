@@ -1,0 +1,11 @@
+node_modules/
+out/
+release/
+dist/
+*.log
+npm-install.log
+npm-install.err.log
+.DS_Store
+Thumbs.db
+.vite/
+*.tsbuildinfo

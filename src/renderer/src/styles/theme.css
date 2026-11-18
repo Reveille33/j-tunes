@@ -1,0 +1,68 @@
+/*
+ * Theme tokens. Every colour the app uses is defined here, so switching
+ * themes is a single attribute change on <html> with no re-render.
+ */
+
+:root,
+[data-theme='dark'] {
+  --bg: #181a1f;
+  --bg-elevated: #1e2127;
+  --surface: #23262d;
+  --surface-hover: #2a2e36;
+  --surface-active: #31363f;
+  --border: #333842;
+  --border-strong: #434956;
+
+  --text: #e6e8ec;
+  --text-muted: #9aa1ad;
+  --text-subtle: #6b727e;
+
+  --accent: #4c8dff;
+  --accent-hover: #6ba0ff;
+  --accent-contrast: #ffffff;
+  --accent-soft: rgba(76, 141, 255, 0.16);
+
+  --success: #3ecf8e;
+  --warning: #f5a623;
+  --danger: #ff6b6b;
+  --danger-hover: #ff8585;
+
+  --player-bg: #14161a;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --scrollbar: #3a3f4a;
+  --scrollbar-hover: #4a505c;
+
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --row-height: 64px;
+}
+
+[data-theme='light'] {
+  --bg: #f5f6f8;
+  --bg-elevated: #ffffff;
+  --surface: #ffffff;
+  --surface-hover: #eef0f4;
+  --surface-active: #e2e6ed;
+  --border: #dde1e8;
+  --border-strong: #c3cad6;
+
+  --text: #1c1e22;
+  --text-muted: #5c636f;
+  --text-subtle: #868d99;
+
+  --accent: #1f6feb;
+  --accent-hover: #1a5fcc;
+  --accent-contrast: #ffffff;
+  --accent-soft: rgba(31, 111, 235, 0.12);
+
+  --success: #1a7f4b;
+  --warning: #b26b00;
+  --danger: #cf222e;
+  --danger-hover: #b91c28;
+
+  --player-bg: #ffffff;
+  --shadow: 0 8px 24px rgba(20, 25, 35, 0.12);
+  --scrollbar: #c9cfd9;
+  --scrollbar-hover: #b0b8c4;
+}
