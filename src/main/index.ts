@@ -8,6 +8,12 @@ import { buildApplicationMenu } from './menu'
 import { runUpdateSweep } from './ipc/updates.ipc'
 import { authorizeLocalFile, parseMediaEpisodeId, serveLocalFile } from './services/mediaAccess'
 
+// Screenshot runs point the app at a throwaway profile. Unset in normal use.
+const userDataOverride = process.env.JTUNES_USER_DATA
+if (userDataOverride) {
+  app.setPath('userData', userDataOverride)
+}
+
 const currentDir = dirname(fileURLToPath(import.meta.url))
 
 protocol.registerSchemesAsPrivileged([
