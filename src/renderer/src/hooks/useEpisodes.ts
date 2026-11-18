@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useEpisodeStore } from '../state/episodeStore'
 import { useUiStore } from '../state/uiStore'
+import { isCurrentEpisodePage } from '@shared/episodePaging'
 import { MAX_LOADED_EPISODES, PAGE_SIZE, SEARCH_DEBOUNCE_MS } from '@shared/constants'
 import type { EpisodeQuery } from '@shared/types'
 
@@ -24,6 +25,7 @@ export function useEpisodes(): {
   const selectedPodcastId = useUiStore((s) => s.selectedPodcastId)
 
   const requestId = useRef(0)
+  const loadId = useRef(0)
 
   const buildQuery = useCallback(
     (offset: number): EpisodeQuery => ({
@@ -72,14 +74,25 @@ export function useEpisodes(): {
     if (!store.hasMore || store.loadingMore) return
     if (store.episodes.length >= MAX_LOADED_EPISODES) return
 
+    const startedRequest = requestId.current
+    const startedLoad = ++loadId.current
+    const offset = store.episodes.length
     store.setLoadingMore(true)
     try {
-      const page = await window.api.queryEpisodes(buildQuery(store.episodes.length))
-      useEpisodeStore.getState().appendEpisodes(page.rows, page.total, page.hasMore)
+      const page = await window.api.queryEpisodes(buildQuery(offset))
+      if (!isCurrentEpisodePage(startedRequest, requestId.current, startedLoad, loadId.current)) {
+        return
+      }
+      const current = useEpisodeStore.getState()
+      // A refresh replaced the list while this page was in flight.
+      if (current.episodes.length !== offset) return
+      current.appendEpisodes(page.rows, page.total, page.hasMore)
     } catch {
       // A failed page load leaves the already-loaded rows intact.
     } finally {
-      useEpisodeStore.getState().setLoadingMore(false)
+      if (isCurrentEpisodePage(startedRequest, requestId.current, startedLoad, loadId.current)) {
+        useEpisodeStore.getState().setLoadingMore(false)
+      }
     }
   }, [buildQuery])
 
