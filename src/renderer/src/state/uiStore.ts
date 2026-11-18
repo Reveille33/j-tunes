@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { defaultSortDirection } from '@shared/sortDirection'
 import type { SortBy, SortDirection, Theme } from '@shared/types'
 
 export type ViewFilter = 'all' | 'unplayed' | 'downloaded'
@@ -85,19 +86,7 @@ export const useUiStore = create<UiState>((set) => ({
 
   setTheme: (theme) => set({ theme }),
   setSearchTerm: (searchTerm) => set({ searchTerm }),
-  setSortBy: (sortBy) =>
-    set((state) => ({
-      sortBy,
-      // Relevance only makes sense while searching.
-      direction:
-        sortBy === 'relevance'
-          ? 'asc'
-          : sortBy === 'title' || sortBy === 'podcast'
-            ? 'asc'
-            : state.direction === 'asc'
-              ? 'desc'
-              : 'asc'
-    })),
+  setSortBy: (sortBy) => set({ sortBy, direction: defaultSortDirection(sortBy) }),
   toggleDirection: () =>
     set((state) => ({ direction: state.direction === 'asc' ? 'desc' : 'asc' })),
   setViewFilter: (viewFilter) => set({ viewFilter }),
