@@ -70,6 +70,31 @@ export async function uniquePath(dir: string, fileName: string): Promise<string>
 }
 
 /**
+ * Picks a path that `taken` rejects, appending ` (2)`, ` (3)` ... as needed.
+ *
+ * The check is synchronous so a caller can claim the path before yielding.
+ * Downloads use it to treat in-flight destinations as taken, not only files
+ * that already exist on disk.
+ */
+export function reserveUniquePath(
+  dir: string,
+  fileName: string,
+  taken: (candidate: string) => boolean
+): string {
+  const ext = extname(fileName)
+  const stem = basename(fileName, ext)
+
+  let candidate = join(dir, fileName)
+  let counter = 2
+  while (taken(candidate)) {
+    candidate = join(dir, `${stem} (${counter})${ext}`)
+    counter += 1
+    if (counter > 999) break
+  }
+  return candidate
+}
+
+/**
  * Moves a file to its final name, replacing any existing file at the target.
  * A rename across device boundaries falls back to copy + delete.
  */

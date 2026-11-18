@@ -108,22 +108,6 @@ CREATE TABLE IF NOT EXISTS settings (
   updated_at INTEGER NOT NULL
 );
 
--- Durable download queue so an interrupted download survives a restart.
-CREATE TABLE IF NOT EXISTS download_queue (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  episode_id  INTEGER NOT NULL UNIQUE REFERENCES episodes(id) ON DELETE CASCADE,
-  state       TEXT    NOT NULL DEFAULT 'queued',
-  progress    REAL    NOT NULL DEFAULT 0,
-  bytes_done  INTEGER NOT NULL DEFAULT 0,
-  total_bytes INTEGER,
-  error       TEXT,
-  attempts    INTEGER NOT NULL DEFAULT 0,
-  queued_at   INTEGER NOT NULL,
-  updated_at  INTEGER NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_dlq_state ON download_queue(state, queued_at);
-
 CREATE TABLE IF NOT EXISTS import_jobs (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   source_dir  TEXT NOT NULL,
@@ -167,6 +151,14 @@ CREATE TABLE IF NOT EXISTS listening_stats (
 );
 
 ALTER TABLE episodes ADD COLUMN chapters_url TEXT;
+`
+  },
+  {
+    version: '003_drop_download_queue',
+    sql: `
+-- The queue was never written. Episode download_state is enough to rebuild
+-- in-flight work after a restart, so the unused table is removed.
+DROP TABLE IF EXISTS download_queue;
 `
   }
 ]

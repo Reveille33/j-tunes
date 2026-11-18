@@ -53,6 +53,11 @@ export function registerDownloadHandlers(ctx: AppContext): void {
     ctx.downloads.resume(episodeId)
   })
 
+  ipcMain.handle(IPC.DOWNLOADS_CANCEL, (_event, raw: unknown) => {
+    const { episodeId } = episodeIdSchema.parse(raw)
+    ctx.downloads.cancel(episodeId)
+  })
+
   /**
    * Deletes a downloaded file.
    *

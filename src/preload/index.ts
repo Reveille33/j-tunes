@@ -92,6 +92,8 @@ const api = {
     ipcRenderer.invoke(IPC.DOWNLOADS_PAUSE, { episodeId }),
   resumeDownload: (episodeId: number): Promise<void> =>
     ipcRenderer.invoke(IPC.DOWNLOADS_RESUME, { episodeId }),
+  cancelDownload: (episodeId: number): Promise<void> =>
+    ipcRenderer.invoke(IPC.DOWNLOADS_CANCEL, { episodeId }),
   deleteDownload: (episodeId: number, fileAction: FileAction): Promise<OperationResult> =>
     ipcRenderer.invoke(IPC.DOWNLOADS_DELETE, { episodeId, fileAction }),
   redownloadEpisode: (episodeId: number): Promise<void> =>

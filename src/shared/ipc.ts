@@ -63,6 +63,7 @@ export const IPC = {
   DOWNLOADS_ENQUEUE_PODCAST: 'downloads:enqueuePodcast',
   DOWNLOADS_PAUSE: 'downloads:pause',
   DOWNLOADS_RESUME: 'downloads:resume',
+  DOWNLOADS_CANCEL: 'downloads:cancel',
   DOWNLOADS_DELETE: 'downloads:delete',
   DOWNLOADS_REDOWNLOAD: 'downloads:redownload',
   DOWNLOADS_LIST: 'downloads:list',
@@ -140,6 +141,8 @@ export interface JTunesApi {
   enqueuePodcastDownloads(podcastId: number): Promise<void>
   pauseDownload(episodeId: number): Promise<void>
   resumeDownload(episodeId: number): Promise<void>
+  /** Stops an in-progress or paused download and drops the partial file. */
+  cancelDownload(episodeId: number): Promise<void>
   deleteDownload(episodeId: number, fileAction: FileAction): Promise<OperationResult>
   redownloadEpisode(episodeId: number): Promise<void>
   listDownloads(): Promise<DownloadQueueItem[]>
