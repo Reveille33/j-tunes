@@ -1,5 +1,4 @@
 import { ipcMain } from 'electron'
-import { pathToFileURL } from 'node:url'
 import { basename, extname } from 'node:path'
 import { stat } from 'node:fs/promises'
 import { IPC } from '@shared/ipc'
@@ -88,7 +87,7 @@ export function registerEpisodeHandlers(ctx: AppContext): void {
           const info = await stat(filePath)
           if (info.isFile()) {
             return {
-              url: pathToFileURL(filePath).href.replace(/^file:/, 'media:'),
+              url: `media://audio/?path=${encodeURIComponent(filePath)}`,
               mime: AUDIO_MIME_TYPES[extension] ?? 'audio/mpeg',
               duration,
               fileName: basename(filePath),

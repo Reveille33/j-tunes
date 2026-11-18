@@ -1,6 +1,6 @@
 import { app, BrowserWindow, Menu, protocol, net } from 'electron'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { dirname } from 'node:path'
 import { AppContext } from './appContext'
 import { registerIpcHandlers } from './ipc'
@@ -76,8 +76,24 @@ function bootstrap(): void {
 
 app.whenReady().then(() => {
   protocol.handle('media', (request) => {
-    const fileUrl = request.url.replace(/^media:/, 'file:')
-    return net.fetch(fileUrl)
+    try {
+      const url = new URL(request.url)
+      const paramPath = url.searchParams.get('path')
+      if (paramPath) {
+        return net.fetch(pathToFileURL(paramPath).href)
+      }
+      if (url.hostname && /^[a-zA-Z]$/.test(url.hostname)) {
+        const fullPath = `${url.hostname.toUpperCase()}:${decodeURIComponent(url.pathname)}`
+        return net.fetch(pathToFileURL(fullPath).href)
+      }
+      const directPath = decodeURIComponent(url.pathname)
+      if (directPath) {
+        return net.fetch(pathToFileURL(directPath).href)
+      }
+    } catch {
+      // Fall through to 404
+    }
+    return new Response('Not found', { status: 404 })
   })
 
   bootstrap()
