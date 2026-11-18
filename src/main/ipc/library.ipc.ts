@@ -2,6 +2,7 @@ import { ipcMain, dialog } from 'electron'
 import { readFile, writeFile } from 'node:fs/promises'
 import { IPC } from '@shared/ipc'
 import { importSchema, savePositionSchema } from '@shared/validation'
+import { listeningIncrement } from '../services/listeningStats'
 import { buildOpml, exportableCount, parseOpml } from '../services/opml'
 import type { AppContext } from '../appContext'
 import type { OperationResult, OpmlImportSummary } from '@shared/types'
@@ -102,11 +103,8 @@ export function registerLibraryHandlers(ctx: AppContext): void {
     // large jump is treated as a seek rather than listening.
     const previous = ctx.episodes.getById(episodeId)
     const previousPosition = previous?.play_position ?? 0
+    const increment = listeningIncrement(previousPosition, position, previous?.played === 1)
     ctx.episodes.setPlayPosition(episodeId, position, duration)
-
-    const delta = position - previousPosition
-    if (delta > 0 && delta <= 90) {
-      ctx.stats.addListeningSeconds(delta)
-    }
+    if (increment > 0) ctx.stats.addListeningSeconds(increment)
   })
 }

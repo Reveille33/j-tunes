@@ -64,7 +64,13 @@ export function usePlayer(
         audio.currentTime >= total - RESUME_TAIL_SECONDS
       ) {
         autoMarkedRef.current = true
-        void window.api.setPlayed(id, true)
+        const position = audio.currentTime
+        const duration = audio.duration || 0
+        // Save the playhead before mark-played clears it, so the tail is
+        // counted once and the following save is not a jump from zero.
+        void window.api.savePlaybackPosition(id, position, duration).then(() => {
+          void window.api.setPlayed(id, true)
+        })
         const current = useEpisodeStore.getState().episodes.find((e) => e.id === id)
         if (current && !current.played) {
           useEpisodeStore.getState().updateEpisode({ ...current, played: true })
