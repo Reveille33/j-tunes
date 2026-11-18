@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { usePlayerStore } from '../state/playerStore'
 import { useUiStore } from '../state/uiStore'
 import { useEpisodeStore } from '../state/episodeStore'
+import { playbackErrorMessage } from '@shared/playbackError'
 import {
   PLAYBACK_SPEEDS,
   POSITION_SAVE_INTERVAL_MS,
@@ -91,6 +92,13 @@ export function usePlayer(
     const onPause = () => store.setPlaying(false)
     const onWaiting = () => store.setLoading(true)
     const onPlaying = () => store.setLoading(false)
+    const onError = () => {
+      const message = playbackErrorMessage(audio.error?.code)
+      usePlayerStore.getState().setError(message)
+      usePlayerStore.getState().setPlaying(false)
+      usePlayerStore.getState().setLoading(false)
+      useUiStore.getState().showToast(message, 'error')
+    }
     const onEndedHandler = () => {
       store.setPlaying(false)
       store.setPosition(audio.duration || 0)
@@ -108,6 +116,7 @@ export function usePlayer(
     audio.addEventListener('waiting', onWaiting)
     audio.addEventListener('playing', onPlaying)
     audio.addEventListener('ended', onEndedHandler)
+    audio.addEventListener('error', onError)
 
     return () => {
       audio.removeEventListener('timeupdate', onTimeUpdate)
@@ -119,6 +128,7 @@ export function usePlayer(
       audio.removeEventListener('waiting', onWaiting)
       audio.removeEventListener('playing', onPlaying)
       audio.removeEventListener('ended', onEndedHandler)
+      audio.removeEventListener('error', onError)
     }
   }, [audio, savePosition, onEnded])
 
