@@ -11,6 +11,7 @@ import { UpdateService } from './services/updateService'
 import { DownloadManager } from './services/downloadManager'
 import { Importer } from './services/importer'
 import { PlaybackService } from './services/playbackService'
+import { autoDownloadEnabled } from './services/initialDownload'
 import { OpmlImportService } from './services/opmlImportService'
 import { defaultDownloadDir } from './util/paths'
 import type { AppSettings, DownloadQueueItem, UpdateProgress } from '@shared/types'
@@ -54,7 +55,11 @@ export class AppContext {
     this.opmlImporter = new OpmlImportService({
       podcasts: this.podcasts,
       episodes: this.episodes,
-      onProgress: (progress) => this.emit('library:opmlProgress', progress)
+      onProgress: (progress) => this.emit('library:opmlProgress', progress),
+      initialDownload: {
+        autoDownloadDefault: () => this.getSettings().autoDownloadDefault,
+        enqueue: (episodeId) => this.downloads.enqueue(episodeId)
+      }
     })
 
     this.updates = new UpdateService({
@@ -62,10 +67,9 @@ export class AppContext {
       episodes: this.episodes,
       onProgress: (progress: UpdateProgress) => this.emit('updates:progress', progress),
       onNewEpisodes: (podcast, episodeIds) => {
-        // Auto-download new episodes when enabled for this podcast or globally.
+        // Every episode that is new since the last check, when both flags are on.
         const settings = this.getSettings()
-        const shouldDownload = podcast.autoDownload && settings.autoDownloadDefault
-        if (!shouldDownload) return
+        if (!autoDownloadEnabled(settings.autoDownloadDefault, podcast.autoDownload)) return
         for (const id of episodeIds) {
           try {
             this.downloads.enqueue(id)
