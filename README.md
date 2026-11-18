@@ -1,5 +1,8 @@
 # j-Tunes
 
+[![CI](https://github.com/Reveille33/j-tunes/actions/workflows/ci.yml/badge.svg)](https://github.com/Reveille33/j-tunes/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A streamlined, highly performant desktop podcast manager and player, built as an
 iTunes replacement for a large legacy podcast library dating back to 2011.
 
