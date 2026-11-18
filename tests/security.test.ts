@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { createServer, type Server } from 'node:http'
 import { once } from 'node:events'
+import { realpathSync } from 'node:fs'
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -147,7 +148,9 @@ describe('media protocol authorization', () => {
       imported: false
     })
     expect(allowed.ok).toBe(true)
-    if (allowed.ok) expect(allowed.path).toBe(local)
+    if (allowed.ok) {
+      expect(realpathSync.native(allowed.path)).toBe(realpathSync.native(local))
+    }
 
     const missing = await authorizeLocalFile({
       filePath: join(downloadDir, 'gone.mp3'),
