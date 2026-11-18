@@ -1,7 +1,7 @@
 # j-Tunes — Implementation Plan
 
 > Desktop podcast manager & player (iTunes replacement) for a large legacy library (2011 → today).
-> Status: **Awaiting approval.** No project files are scaffolded until this plan is approved.
+> Status: **Shipped.** This file is the original design record for the app in this repository. `npm test` currently passes 133 tests in 16 files. The notes from §16 onward were written as features landed; §16.13 records that current suite.
 
 ---
 
@@ -743,7 +743,7 @@ Verified live: Continue Listening rendered five cards with real artwork and perc
 
 | Item | Result |
 |---|---|
-| Tests | 93 passed across 11 suites |
+| Tests | 133 passed across 16 files (`npm test`) |
 | TypeScript | both `tsconfig.node.json` and `tsconfig.web.json` clean |
 | Build | `electron-vite build` succeeds |
 | Packaging | `electron-builder --dir` produces `release\win-unpacked\j-Tunes.exe` |
