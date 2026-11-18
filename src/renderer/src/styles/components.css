@@ -968,7 +968,8 @@
 }
 
 .episode-row:hover .episode-row-actions,
-.episode-row:focus-within .episode-row-actions {
+.episode-row:focus-within .episode-row-actions,
+.episode-row-actions.is-visible {
   opacity: 1;
 }
 

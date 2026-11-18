@@ -189,8 +189,7 @@ export class PodcastRepo {
   }
 
   /**
-   * Removes the podcast. Episode rows cascade via the foreign key, and
-   * download_queue rows cascade from the episodes.
+   * Removes the podcast. Episode rows cascade via the foreign key.
    */
   remove(id: number): void {
     this.db.prepare('DELETE FROM podcasts WHERE id = ?').run(id)

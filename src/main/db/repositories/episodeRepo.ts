@@ -319,6 +319,34 @@ export class EpisodeRepo {
       .run(state, error, Date.now(), id)
   }
 
+  /**
+   * A process that died mid-transfer leaves rows in `downloading`. Nothing is
+   * actually running after a restart, so mark them paused. The partial file
+   * stays on disk and a later resume continues it.
+   */
+  resetDownloadingToPaused(): number {
+    const info = this.db
+      .prepare(
+        `UPDATE episodes
+         SET download_state = 'paused', download_error = NULL, updated_at = ?
+         WHERE download_state = 'downloading'`
+      )
+      .run(Date.now())
+    return info.changes
+  }
+
+  /** Episode ids in a download state that still have a remote media URL. */
+  listIdsByDownloadState(state: DownloadState): number[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id FROM episodes
+         WHERE download_state = ? AND media_url IS NOT NULL
+         ORDER BY id ASC`
+      )
+      .all(state) as { id: number }[]
+    return rows.map((row) => row.id)
+  }
+
   setFilePath(id: number, filePath: string | null, fileSize: number | null): void {
     this.db
       .prepare('UPDATE episodes SET file_path = ?, file_size = ?, updated_at = ? WHERE id = ?')

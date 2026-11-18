@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createInMemoryDb, type Db } from '../src/main/db/connection'
+import { MIGRATIONS } from '../src/main/db/migrations'
 import { PodcastRepo } from '../src/main/db/repositories/podcastRepo'
 import { EpisodeRepo } from '../src/main/db/repositories/episodeRepo'
 import { SearchRepo, toFtsQuery, yearBounds } from '../src/main/db/repositories/searchRepo'
@@ -46,8 +47,19 @@ describe('database layer', () => {
     expect(names).toContain('episodes')
     expect(names).toContain('episode_search')
     expect(names).toContain('settings')
-    expect(names).toContain('download_queue')
+    expect(names).not.toContain('download_queue')
     expect(names).toContain('import_jobs')
+  })
+
+  it('drops a leftover download_queue table', () => {
+    db.exec('CREATE TABLE download_queue (id INTEGER PRIMARY KEY)')
+    const drop = MIGRATIONS.find((migration) => migration.version === '003_drop_download_queue')
+    expect(drop).toBeDefined()
+    db.exec(drop!.sql)
+    const names = (
+      db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[]
+    ).map((row) => row.name)
+    expect(names).not.toContain('download_queue')
   })
 
   it('creates a podcast and retrieves it', () => {

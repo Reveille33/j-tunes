@@ -3,7 +3,7 @@ import { useUiStore } from '../../state/uiStore'
 import { useEpisodeStore } from '../../state/episodeStore'
 import { useQueueStore } from '../../state/queueStore'
 import { formatDate, formatDuration } from '../../utils/format'
-import type { Episode } from '@shared/types'
+import type { DownloadState, Episode } from '@shared/types'
 
 interface EpisodeRowProps {
   episode: Episode
@@ -53,8 +53,9 @@ export const EpisodeRow = memo(function EpisodeRow({ episode, onPlay }: EpisodeR
   }
 
   const handleDownload = async () => {
-    if (isDownloaded) {
-      try {
+    const state = episode.downloadState
+    try {
+      if (state === 'done') {
         await window.api.deleteDownload(episode.id, 'trash')
         updateEpisode({
           ...episode,
@@ -63,15 +64,39 @@ export const EpisodeRow = memo(function EpisodeRow({ episode, onPlay }: EpisodeR
           fileSize: null
         })
         showToast('Download removed', 'success')
-      } catch (error) {
-        showToast((error as Error).message, 'error')
+        return
       }
-      return
-    }
-
-    try {
+      if (state === 'downloading') {
+        await window.api.pauseDownload(episode.id)
+        updateEpisode({ ...episode, downloadState: 'paused' })
+        return
+      }
+      if (state === 'paused') {
+        await window.api.resumeDownload(episode.id)
+        updateEpisode({ ...episode, downloadState: 'queued', downloadError: null })
+        return
+      }
+      if (state === 'error') {
+        await window.api.redownloadEpisode(episode.id)
+        updateEpisode({ ...episode, downloadState: 'queued', downloadError: null, filePath: null, fileSize: null })
+        return
+      }
+      if (state === 'queued') {
+        await window.api.cancelDownload(episode.id)
+        updateEpisode({ ...episode, downloadState: 'none', downloadError: null })
+        return
+      }
       await window.api.enqueueDownload(episode.id)
-      updateEpisode({ ...episode, downloadState: 'queued' })
+      updateEpisode({ ...episode, downloadState: 'queued', downloadError: null })
+    } catch (error) {
+      showToast((error as Error).message, 'error')
+    }
+  }
+
+  const handleCancelDownload = async () => {
+    try {
+      await window.api.cancelDownload(episode.id)
+      updateEpisode({ ...episode, downloadState: 'none', downloadError: null })
     } catch (error) {
       showToast((error as Error).message, 'error')
     }
@@ -163,7 +188,16 @@ export const EpisodeRow = memo(function EpisodeRow({ episode, onPlay }: EpisodeR
         ) : null}
       </div>
 
-      <div className="episode-row-actions">
+      <div
+        className={`episode-row-actions${
+          episode.downloadState === 'queued' ||
+          episode.downloadState === 'downloading' ||
+          episode.downloadState === 'paused' ||
+          episode.downloadState === 'error'
+            ? ' is-visible'
+            : ''
+        }`}
+      >
         <button
           className="icon-button"
           onClick={() => void handleQueue()}
@@ -185,19 +219,57 @@ export const EpisodeRow = memo(function EpisodeRow({ episode, onPlay }: EpisodeR
 
         <button
           className="icon-button"
-          onClick={handleDownload}
-          title={
-            isDownloaded
-              ? 'Delete download'
-              : episode.downloadState === 'error'
-                ? 'Retry download'
-                : 'Download'
-          }
-          aria-label={isDownloaded ? 'Delete download' : 'Download'}
+          onClick={() => void handleDownload()}
+          title={downloadButtonTitle(episode.downloadState, episode.downloadError)}
+          aria-label={downloadButtonTitle(episode.downloadState, episode.downloadError)}
         >
-          {isDownloaded ? '🗑' : episode.downloadState === 'downloading' ? '⏳' : '⬇'}
+          {downloadButtonIcon(episode.downloadState)}
         </button>
+        {episode.downloadState === 'downloading' || episode.downloadState === 'paused' ? (
+          <button
+            className="icon-button"
+            onClick={() => void handleCancelDownload()}
+            title="Cancel download"
+            aria-label="Cancel download"
+          >
+            ✕
+          </button>
+        ) : null}
       </div>
     </div>
   )
 })
+
+function downloadButtonTitle(state: DownloadState, error: string | null): string {
+  switch (state) {
+    case 'done':
+      return 'Delete download'
+    case 'downloading':
+      return 'Pause download'
+    case 'paused':
+      return 'Resume download'
+    case 'error':
+      return error ? `Retry download: ${error}` : 'Retry download'
+    case 'queued':
+      return 'Cancel download'
+    default:
+      return 'Download'
+  }
+}
+
+function downloadButtonIcon(state: DownloadState): string {
+  switch (state) {
+    case 'done':
+      return '🗑'
+    case 'downloading':
+      return '⏸'
+    case 'paused':
+      return '⏵'
+    case 'error':
+      return '↻'
+    case 'queued':
+      return '✕'
+    default:
+      return '⬇'
+  }
+}
