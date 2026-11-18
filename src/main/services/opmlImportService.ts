@@ -1,4 +1,5 @@
 import { canonicaliseFeedUrl } from './feedService'
+import { queueNewestSubscribedEpisode } from './initialDownload'
 import { subscribeToFeed } from './subscriptionService'
 import type { EpisodeRepo } from '../db/repositories/episodeRepo'
 import type { PodcastRepo } from '../db/repositories/podcastRepo'
@@ -10,6 +11,14 @@ export interface OpmlImportDeps {
   podcasts: PodcastRepo
   episodes: EpisodeRepo
   onProgress?: (progress: OpmlImportProgress) => void
+  /**
+   * When set, each new subscription queues only its newest episode, using
+   * the same rule as a manual subscribe.
+   */
+  initialDownload?: {
+    autoDownloadDefault: () => boolean
+    enqueue: (episodeId: number) => void
+  }
 }
 
 /**
@@ -61,8 +70,17 @@ export class OpmlImportService {
           if (this.deps.podcasts.getByFeedUrl(canonical)) {
             summary.skipped += 1
           } else {
-            await subscribeToFeed(this.deps, canonical)
+            const subscribed = await subscribeToFeed(this.deps, canonical)
             summary.added += 1
+            if (this.deps.initialDownload) {
+              queueNewestSubscribedEpisode({
+                podcast: subscribed.podcast,
+                autoDownloadDefault: this.deps.initialDownload.autoDownloadDefault(),
+                episodeIds: subscribed.newEpisodeIds,
+                episodes: this.deps.episodes,
+                enqueue: this.deps.initialDownload.enqueue
+              })
+            }
           }
         } catch {
           summary.failed += 1

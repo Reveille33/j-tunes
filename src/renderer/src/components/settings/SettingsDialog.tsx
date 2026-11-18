@@ -174,6 +174,9 @@ export function SettingsDialog({ onClose }: SettingsDialogProps): React.JSX.Elem
                 />
                 Automatically download new episodes when a podcast is updated
               </label>
+              <p className="dialog-hint">
+                A new subscription, including an OPML import, downloads only the newest episode.
+              </p>
             </div>
 
             <div className="dialog-section">

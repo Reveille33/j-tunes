@@ -7,6 +7,7 @@ import {
   searchFeedSchema
 } from '@shared/validation'
 import { canonicaliseFeedUrl, fetchFeed } from '../services/feedService'
+import { queueNewestSubscribedEpisode } from '../services/initialDownload'
 import { subscribeToFeed } from '../services/subscriptionService'
 import { searchFeeds } from '../services/feedSearchService'
 import type { AppContext } from '../appContext'
@@ -47,17 +48,15 @@ export function registerPodcastHandlers(ctx: AppContext): void {
     const { feedUrl } = subscribeSchema.parse(raw)
     const { podcast, newEpisodeIds } = await subscribeToFeed(ctx, feedUrl)
 
-    // Auto-download the back catalogue when auto-download is on.
-    const settings = ctx.getSettings()
-    if (settings.autoDownloadDefault) {
-      for (const id of newEpisodeIds) {
-        try {
-          ctx.downloads.enqueue(id)
-        } catch {
-          // Skip episodes with no media URL.
-        }
-      }
-    }
+    // Download only the newest episode. The update path still queues every
+    // episode that arrives later, using the same two flags.
+    queueNewestSubscribedEpisode({
+      podcast,
+      autoDownloadDefault: ctx.getSettings().autoDownloadDefault,
+      episodeIds: newEpisodeIds,
+      episodes: ctx.episodes,
+      enqueue: (id) => ctx.downloads.enqueue(id)
+    })
 
     return podcast
   })
