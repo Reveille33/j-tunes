@@ -16,6 +16,8 @@ export interface EpisodeInsert {
   seasonNumber?: number | null
   artworkUrl?: string | null
   chaptersUrl?: string | null
+  filePath?: string | null
+  fileSize?: number | null
   isImported?: boolean
 }
 
@@ -23,8 +25,13 @@ export class EpisodeRepo {
   constructor(private readonly db: Db) {}
 
   /**
-   * Inserts episodes, ignoring any whose guid already exists for the podcast.
-   * This is what makes a feed re-check idempotent.
+   * Inserts episodes. A guid that already exists for the podcast is not
+   * inserted again, which keeps a feed re-check idempotent.
+   *
+   * When that existing row's title, media URL, media type, or duration
+   * differs from the feed, those fields are updated. Playback, download
+   * state, and the local file path are left alone. A null incoming value
+   * does not wipe a value already stored.
    *
    * Returns the ids of the genuinely new rows.
    */
@@ -41,11 +48,27 @@ export class EpisodeRepo {
                @mediaLength, @durationSecs, @releaseDate, @episodeNumber, @seasonNumber,
                @artworkUrl, @chaptersUrl, @now, @now)`
     )
+    const refreshExisting = this.db.prepare(
+      `UPDATE episodes SET
+         title = CASE WHEN @title IS NOT NULL AND title IS NOT @title THEN @title ELSE title END,
+         media_url = CASE WHEN @mediaUrl IS NOT NULL AND media_url IS NOT @mediaUrl THEN @mediaUrl ELSE media_url END,
+         media_type = CASE WHEN @mediaType IS NOT NULL AND media_type IS NOT @mediaType THEN @mediaType ELSE media_type END,
+         duration_secs = CASE WHEN @durationSecs IS NOT NULL AND duration_secs IS NOT @durationSecs THEN @durationSecs ELSE duration_secs END,
+         updated_at = @now
+       WHERE podcast_id = @podcastId
+         AND guid = @guid
+         AND (
+           (@title IS NOT NULL AND title IS NOT @title)
+           OR (@mediaUrl IS NOT NULL AND media_url IS NOT @mediaUrl)
+           OR (@mediaType IS NOT NULL AND media_type IS NOT @mediaType)
+           OR (@durationSecs IS NOT NULL AND duration_secs IS NOT @durationSecs)
+         )`
+    )
 
     const run = this.db.transaction((rows: ParsedEpisode[]) => {
       const ids: number[] = []
       for (const ep of rows) {
-        const info = insert.run({
+        const params = {
           podcastId,
           guid: ep.guid,
           title: ep.title,
@@ -61,8 +84,10 @@ export class EpisodeRepo {
           artworkUrl: ep.artworkUrl ?? null,
           chaptersUrl: ep.chaptersUrl ?? null,
           now
-        })
+        }
+        const info = insert.run(params)
         if (info.changes > 0) ids.push(Number(info.lastInsertRowid))
+        else refreshExisting.run(params)
       }
       return ids
     })
@@ -82,7 +107,7 @@ export class EpisodeRepo {
             created_at, updated_at)
          VALUES (@podcastId, @guid, @title, @description, @descriptionHtml, @mediaUrl, @mediaType,
                  @mediaLength, @durationSecs, @releaseDate, @episodeNumber, @seasonNumber,
-                 @artworkUrl, NULL, NULL, 'done', @durationKnown, 1, @now, @now)`
+                 @artworkUrl, @filePath, @fileSize, 'done', @durationKnown, 1, @now, @now)`
       )
       .run({
         podcastId: input.podcastId,
@@ -98,10 +123,36 @@ export class EpisodeRepo {
         episodeNumber: input.episodeNumber ?? null,
         seasonNumber: input.seasonNumber ?? null,
         artworkUrl: input.artworkUrl ?? null,
+        filePath: input.filePath ?? null,
+        fileSize: input.fileSize ?? null,
         durationKnown: input.durationSecs ?? null,
         now
       })
-    return Number(info.lastInsertRowid)
+
+    if (info.changes > 0) return Number(info.lastInsertRowid)
+
+    // A previous import of this file may have stored the row without a path.
+    if (input.filePath) this.repairNullFilePath(input.guid, input.filePath, input.fileSize ?? null)
+
+    const existing = this.db
+      .prepare('SELECT id FROM episodes WHERE podcast_id = ? AND guid = ?')
+      .get(input.podcastId, input.guid) as { id: number } | undefined
+    return existing?.id ?? Number(info.lastInsertRowid)
+  }
+
+  /**
+   * Fills in file_path and file_size on an imported row that was stored
+   * without them. Returns true when a row was repaired.
+   */
+  repairNullFilePath(guid: string, filePath: string, fileSize: number | null): boolean {
+    const info = this.db
+      .prepare(
+        `UPDATE episodes
+         SET file_path = @filePath, file_size = @fileSize, updated_at = @now
+         WHERE guid = @guid AND file_path IS NULL`
+      )
+      .run({ guid, filePath, fileSize, now: Date.now() })
+    return info.changes > 0
   }
 
   /** Links a local file to an existing episode (legacy import match). */

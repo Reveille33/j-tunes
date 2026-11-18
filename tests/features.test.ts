@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createInMemoryDb, type Db } from '../src/main/db/connection'
 import { PodcastRepo } from '../src/main/db/repositories/podcastRepo'
 import { EpisodeRepo } from '../src/main/db/repositories/episodeRepo'
@@ -7,7 +7,13 @@ import { QueueRepo } from '../src/main/db/repositories/queueRepo'
 import { StatsRepo } from '../src/main/db/repositories/statsRepo'
 import { SearchRepo } from '../src/main/db/repositories/searchRepo'
 import { SettingsRepo, DEFAULT_SETTINGS } from '../src/main/db/repositories/settingsRepo'
+import { fetchFeed } from '../src/main/services/feedService'
+import { UpdateService } from '../src/main/services/updateService'
 import type { ParsedEpisode } from '../src/shared/types'
+
+vi.mock('../src/main/services/feedService', () => ({
+  fetchFeed: vi.fn()
+}))
 
 function ep(over: Partial<ParsedEpisode> = {}): ParsedEpisode {
   return {
@@ -200,6 +206,62 @@ describe('queue, chapters, stats and bulk actions', () => {
     const list = search.listInProgress(8)
     expect(list.map((episode) => episode.id)).toEqual([ids[0]])
     expect(list[0].podcastTitle).toBe('Show')
+  })
+
+  it('refreshes a changed enclosure without touching play or download state', async () => {
+    const podcast = podcasts.create({ feedUrl: 'https://example.com/show.xml', title: 'Show' })
+    const [id] = episodes.insertMany(podcast.id, [
+      ep({
+        guid: 'ep-1',
+        title: 'Old Title',
+        mediaUrl: 'https://cdn.example/old.mp3',
+        mediaType: 'audio/mpeg',
+        durationSecs: 100
+      })
+    ])
+    episodes.setFilePath(id, '/downloads/old.mp3', 5000)
+    episodes.setDownloadState(id, 'done')
+    episodes.setPlayPosition(id, 42, 100)
+
+    vi.mocked(fetchFeed).mockResolvedValue({
+      notModified: false,
+      etag: 'v2',
+      lastModified: null,
+      feed: {
+        title: 'Show',
+        author: null,
+        description: null,
+        descriptionHtml: null,
+        artworkUrl: null,
+        category: null,
+        language: null,
+        link: null,
+        episodes: [
+          ep({
+            guid: 'ep-1',
+            title: 'New Title',
+            mediaUrl: 'https://cdn.example/new.mp3',
+            mediaType: 'audio/mp4',
+            durationSecs: 222
+          })
+        ]
+      }
+    })
+
+    const outcome = await new UpdateService({ podcasts, episodes }).check(podcast.id)
+
+    expect(outcome.added).toBe(0)
+    expect(outcome.errors).toBe(0)
+    const row = episodes.getById(id)!
+    expect(row.title).toBe('New Title')
+    expect(row.media_url).toBe('https://cdn.example/new.mp3')
+    expect(row.media_type).toBe('audio/mp4')
+    expect(row.duration_secs).toBe(222)
+    expect(row.play_position).toBe(42)
+    expect(row.download_state).toBe('done')
+    expect(row.file_path).toBe('/downloads/old.mp3')
+    expect(row.file_size).toBe(5000)
+    expect(row.played).toBe(0)
   })
 
   it('defaults the new notification setting to on', () => {
