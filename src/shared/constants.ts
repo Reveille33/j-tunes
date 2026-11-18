@@ -42,6 +42,12 @@ export const DOWNLOAD_CONCURRENCY = 3
 /** Per-feed request timeout, in ms. */
 export const FEED_TIMEOUT_MS = 20_000
 
+/** Largest feed document that will be parsed. Larger responses are aborted. */
+export const MAX_FEED_BYTES = 10 * 1024 * 1024
+
+/** Largest Podcast 2.0 chapters document that will be parsed. */
+export const MAX_CHAPTER_BYTES = 2 * 1024 * 1024
+
 /** Per-download request timeout, in ms. */
 export const DOWNLOAD_TIMEOUT_MS = 30 * 60_000
 

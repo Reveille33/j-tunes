@@ -1,10 +1,10 @@
 import { ipcMain } from 'electron'
 import { basename, extname } from 'node:path'
-import { stat } from 'node:fs/promises'
 import { IPC } from '@shared/ipc'
 import { episodeQuerySchema, setPlayedSchema, episodeIdSchema, bulkPlayedSchema } from '@shared/validation'
-import { AUDIO_MIME_TYPES, SUPPORTED_AUDIO_EXTENSIONS } from '@shared/constants'
+import { AUDIO_MIME_TYPES } from '@shared/constants'
 import { fetchChapters } from '../services/chapterService'
+import { authorizeLocalFile, httpMediaUrl, mediaEpisodeUrl } from '../services/mediaAccess'
 import type { AppContext } from '../appContext'
 import type { Chapter, MediaSource } from '@shared/types'
 
@@ -66,9 +66,10 @@ export function registerEpisodeHandlers(ctx: AppContext): void {
   /**
    * Hands the renderer a playable URL for an episode.
    *
-   * The renderer never learns the file path directly - it only receives a
-   * `file://` URL for a file that is confirmed to exist on disk, so a
-   * deleted episode fails cleanly instead of playing a stale path.
+   * A local file is addressed as `media://episode/<id>`. The protocol handler
+   * resolves that id to the stored path and refuses anything outside the
+   * download directory, unless the episode is an imported file. Remote
+   * playback is limited to http and https URLs.
    */
   ipcMain.handle(IPC.EPISODE_MEDIA_URL, async (_event, raw: unknown): Promise<MediaSource> => {
     const { episodeId } = episodeIdSchema.parse(raw)
@@ -77,39 +78,33 @@ export function registerEpisodeHandlers(ctx: AppContext): void {
 
     const duration = episode.duration_secs ?? episode.duration_known ?? null
 
-    // Prefer a downloaded file, but fall back to streaming the remote URL so a
-    // brand-new episode can be played without waiting for its download.
-    const filePath = episode.file_path
-    if (filePath) {
-      const extension = extname(filePath).toLowerCase()
-      if ((SUPPORTED_AUDIO_EXTENSIONS as readonly string[]).includes(extension)) {
-        try {
-          const info = await stat(filePath)
-          if (info.isFile()) {
-            return {
-              url: `media://audio/?path=${encodeURIComponent(filePath)}`,
-              mime: AUDIO_MIME_TYPES[extension] ?? 'audio/mpeg',
-              duration,
-              fileName: basename(filePath),
-              streaming: false
-            }
-          }
-        } catch {
-          // The file is gone - fall through to streaming.
-        }
+    const local = await authorizeLocalFile({
+      filePath: episode.file_path,
+      downloadDir: ctx.getDownloadDir(),
+      imported: episode.is_imported === 1
+    })
+    if (local.ok) {
+      const extension = extname(local.path).toLowerCase()
+      return {
+        url: mediaEpisodeUrl(episode.id),
+        mime: AUDIO_MIME_TYPES[extension] ?? 'audio/mpeg',
+        duration,
+        fileName: basename(local.path),
+        streaming: false
       }
     }
 
-    if (episode.media_url) {
+    const remote = httpMediaUrl(episode.media_url)
+    if (remote) {
       let fileName = 'episode'
       try {
-        fileName = basename(new URL(episode.media_url).pathname) || 'episode'
+        fileName = basename(new URL(remote).pathname) || 'episode'
       } catch {
-        // Keep the generic name for an unparseable URL.
+        // Keep the generic name when the URL has no usable path.
       }
       const extension = extname(fileName).toLowerCase()
       return {
-        url: episode.media_url,
+        url: remote,
         mime: AUDIO_MIME_TYPES[extension] ?? episode.media_type ?? 'audio/mpeg',
         duration,
         fileName,
