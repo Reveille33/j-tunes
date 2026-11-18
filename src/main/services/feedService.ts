@@ -1,5 +1,6 @@
 import { parseFeed } from './feedParser'
-import { FEED_TIMEOUT_MS } from '@shared/constants'
+import { FEED_TIMEOUT_MS, MAX_FEED_BYTES } from '@shared/constants'
+import { fetchHttp, readTextLimited } from '../util/http'
 import type { ParsedFeed } from '@shared/types'
 
 export interface FetchFeedOptions {
@@ -67,17 +68,13 @@ export function httpFallbackUrl(canonicalUrl: string): string {
   return canonicalUrl.replace(/^https:/i, 'http:')
 }
 
-/** Performs a single feed HTTP request. */
+/** Performs a single feed HTTP request. Redirects to non-http schemes fail. */
 async function requestFeed(
   url: string,
   headers: Record<string, string>,
   signal: AbortSignal
 ): Promise<Response> {
-  return fetch(url, {
-    headers,
-    signal,
-    redirect: 'follow'
-  })
+  return fetchHttp(url, { headers, signal })
 }
 
 /**
@@ -143,7 +140,7 @@ export async function fetchFeed(
       )
     }
 
-    const xml = await response.text()
+    const xml = await readTextLimited(response, MAX_FEED_BYTES)
     const feed = parseFeed(xml)
 
     return {

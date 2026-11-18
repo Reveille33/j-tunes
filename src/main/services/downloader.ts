@@ -3,6 +3,7 @@ import { stat, unlink } from 'node:fs/promises'
 import { pipeline } from 'node:stream/promises'
 import { Readable } from 'node:stream'
 import { DOWNLOAD_TIMEOUT_MS } from '@shared/constants'
+import { fetchHttp } from '../util/http'
 
 export interface DownloadOptions {
   url: string
@@ -58,7 +59,7 @@ export async function downloadFile(options: DownloadOptions): Promise<DownloadRe
     }
     if (resumeFrom > 0) headers.Range = `bytes=${resumeFrom}-`
 
-    const response = await fetch(url, { headers, signal: controller.signal })
+    const response = await fetchHttp(url, { headers, signal: controller.signal })
 
     if (!response.ok && response.status !== 206) {
       throw new DownloadError(

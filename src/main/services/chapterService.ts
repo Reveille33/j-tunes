@@ -1,4 +1,5 @@
-import { FEED_TIMEOUT_MS } from '@shared/constants'
+import { FEED_TIMEOUT_MS, MAX_CHAPTER_BYTES } from '@shared/constants'
+import { fetchHttp, readTextLimited } from '../util/http'
 
 export interface RawChapter {
   startSecs: number
@@ -16,7 +17,7 @@ export async function fetchChapters(url: string): Promise<RawChapter[]> {
   const timeout = setTimeout(() => controller.abort(), FEED_TIMEOUT_MS)
 
   try {
-    const response = await fetch(url, {
+    const response = await fetchHttp(url, {
       signal: controller.signal,
       headers: {
         'User-Agent': 'j-Tunes/0.1 (+https://github.com/j-tunes)',
@@ -27,7 +28,7 @@ export async function fetchChapters(url: string): Promise<RawChapter[]> {
       throw new Error(`Chapters request failed with status ${response.status}`)
     }
 
-    const json: unknown = await response.json()
+    const json: unknown = JSON.parse(await readTextLimited(response, MAX_CHAPTER_BYTES))
     const list = Array.isArray(json) ? json : (json as { chapters?: unknown } | null)?.chapters
     if (!Array.isArray(list)) return []
 
