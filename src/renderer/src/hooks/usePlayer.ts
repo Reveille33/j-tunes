@@ -72,7 +72,9 @@ export function usePlayer(
       }
     }
     const onDurationChange = () => {
-      if (Number.isFinite(audio.duration)) store.setDuration(audio.duration)
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        store.setDuration(audio.duration)
+      }
     }
     const onProgress = () => {
       if (audio.buffered.length > 0) {
@@ -169,6 +171,10 @@ export function usePlayer(
 
         // The user may have selected a different episode while loading.
         if (usePlayerStore.getState().episodeId !== episode.id) return
+
+        if (source.duration && source.duration > 0) {
+          player.setDuration(source.duration)
+        }
 
         audio.src = source.url
         audio.playbackRate = player.rate
@@ -275,7 +281,12 @@ export function usePlayer(
   const seek = useCallback(
     (position: number) => {
       if (!audio) return
-      audio.currentTime = Math.max(0, Math.min(position, audio.duration || position))
+      const maxDuration =
+        Number.isFinite(audio.duration) && audio.duration > 0
+          ? audio.duration
+          : usePlayerStore.getState().duration || position
+      audio.currentTime = Math.max(0, Math.min(position, maxDuration))
+      usePlayerStore.getState().setPosition(audio.currentTime)
     },
     [audio]
   )

@@ -1,7 +1,9 @@
-import { app, BrowserWindow, Menu, protocol, net } from 'electron'
-import { join } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
-import { dirname } from 'node:path'
+import { app, BrowserWindow, Menu, protocol } from 'electron'
+import { join, extname, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { existsSync, statSync, createReadStream } from 'node:fs'
+import { Readable } from 'node:stream'
+import { AUDIO_MIME_TYPES } from '@shared/constants'
 import { AppContext } from './appContext'
 import { registerIpcHandlers } from './ipc'
 import { createWindow, resolvePreloadPath } from './window'
@@ -78,22 +80,67 @@ app.whenReady().then(() => {
   protocol.handle('media', (request) => {
     try {
       const url = new URL(request.url)
-      const paramPath = url.searchParams.get('path')
-      if (paramPath) {
-        return net.fetch(pathToFileURL(paramPath).href)
+      let filePath = url.searchParams.get('path')
+      if (!filePath) {
+        if (url.hostname && /^[a-zA-Z]$/.test(url.hostname)) {
+          filePath = `${url.hostname.toUpperCase()}:${decodeURIComponent(url.pathname)}`
+        } else {
+          filePath = decodeURIComponent(url.pathname)
+        }
       }
-      if (url.hostname && /^[a-zA-Z]$/.test(url.hostname)) {
-        const fullPath = `${url.hostname.toUpperCase()}:${decodeURIComponent(url.pathname)}`
-        return net.fetch(pathToFileURL(fullPath).href)
+
+      if (!filePath || !existsSync(filePath)) {
+        return new Response('Not found', { status: 404 })
       }
-      const directPath = decodeURIComponent(url.pathname)
-      if (directPath) {
-        return net.fetch(pathToFileURL(directPath).href)
+
+      const stat = statSync(filePath)
+      if (!stat.isFile()) {
+        return new Response('Not a file', { status: 404 })
       }
+
+      const fileSize = stat.size
+      const ext = extname(filePath).toLowerCase()
+      const mimeType = AUDIO_MIME_TYPES[ext] || 'audio/mpeg'
+      const range = request.headers.get('range')
+
+      if (range) {
+        const match = /bytes=(\d+)-(\d*)/.exec(range)
+        if (match) {
+          const start = parseInt(match[1], 10)
+          const end = match[2] ? parseInt(match[2], 10) : fileSize - 1
+          if (start < fileSize && end < fileSize && start <= end) {
+            const chunkSize = end - start + 1
+            const fileStream = createReadStream(filePath, { start, end })
+            const webStream = Readable.toWeb(fileStream) as any
+
+            return new Response(webStream, {
+              status: 206,
+              statusText: 'Partial Content',
+              headers: {
+                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': String(chunkSize),
+                'Content-Type': mimeType
+              }
+            })
+          }
+        }
+      }
+
+      const fileStream = createReadStream(filePath)
+      const webStream = Readable.toWeb(fileStream) as any
+      return new Response(webStream, {
+        status: 200,
+        statusText: 'OK',
+        headers: {
+          'Content-Length': String(fileSize),
+          'Accept-Ranges': 'bytes',
+          'Content-Type': mimeType
+        }
+      })
     } catch {
-      // Fall through to 404
+      return new Response('Internal error', { status: 500 })
     }
-    return new Response('Not found', { status: 404 })
   })
 
   bootstrap()
