@@ -98,6 +98,36 @@ describe('feedParser', () => {
     expect(feed.episodes[1].durationSecs).toBe(2700)
   })
 
+  it('uses only Atom enclosure or audio and video links as media', () => {
+    const xml = `<?xml version="1.0"?>
+      <feed xmlns="http://www.w3.org/2005/Atom">
+        <title>Cast</title>
+        <entry>
+          <title>Page</title>
+          <id>page</id>
+          <link rel="alternate" type="text/html" href="https://example.com/post"/>
+          <link href="https://example.com/also.html"/>
+        </entry>
+        <entry>
+          <title>Audio</title>
+          <id>audio</id>
+          <link rel="alternate" type="text/html" href="https://example.com/post2"/>
+          <link type="audio/mpeg" href="https://cdn.example/ep.mp3"/>
+        </entry>
+        <entry>
+          <title>Video</title>
+          <id>video</id>
+          <link type="video/mp4" href="https://cdn.example/ep.mp4"/>
+        </entry>
+      </feed>`
+    const feed = parseFeed(xml)
+    expect(feed.episodes.map((episode) => episode.mediaUrl)).toEqual([
+      null,
+      'https://cdn.example/ep.mp3',
+      'https://cdn.example/ep.mp4'
+    ])
+  })
+
   it('parses an Atom feed', () => {
     const feed = parseFeed(ATOM_FEED)
     expect(feed.title).toBe('Atom Cast')
