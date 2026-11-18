@@ -55,8 +55,13 @@ interface UiState {
   hideToast: () => void
 }
 
+function themeBeforePaint(): Theme {
+  const injected = (globalThis as { jTunesInitialTheme?: unknown }).jTunesInitialTheme
+  return injected === 'light' ? 'light' : 'dark'
+}
+
 export const useUiStore = create<UiState>((set) => ({
-  theme: 'dark',
+  theme: themeBeforePaint(),
   searchTerm: '',
   sortBy: 'release_date',
   direction: 'desc',
