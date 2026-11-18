@@ -2,6 +2,13 @@ node_modules/
 out/
 release/
 dist/
+downloads/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite*
+*.env*
 *.log
 npm-install.log
 npm-install.err.log
@@ -9,3 +16,5 @@ npm-install.err.log
 Thumbs.db
 .vite/
 *.tsbuildinfo
+.vscode/
+.idea/

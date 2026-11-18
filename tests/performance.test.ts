@@ -97,7 +97,7 @@ describe('performance with a large library', () => {
       "UPDATE episodes SET file_path = ? WHERE id = ?"
     )
     ids.forEach((row, i) => {
-      attach.run(`C:\\Users\\Bill\\Podcasts\\Show ${i}\\episode-${i}.mp3`, row.id)
+      attach.run(`C:\\Podcasts\\Show ${i}\\episode-${i}.mp3`, row.id)
     })
 
     const start = Date.now()
