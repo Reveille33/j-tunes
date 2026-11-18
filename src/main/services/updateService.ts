@@ -150,7 +150,8 @@ export class UpdateService {
         lastModified: result.lastModified
       })
 
-      // Insert only genuinely new episodes.
+      // Insert new episodes. Existing guids keep play state, download state,
+      // and file_path; insertMany refreshes title and media fields that changed.
       const newIds = this.deps.episodes.insertMany(podcast.id, feed.episodes)
       this.deps.podcasts.refreshCounters(podcast.id)
       this.deps.podcasts.setChecked(podcast.id, null, null)

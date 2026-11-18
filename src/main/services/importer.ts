@@ -145,6 +145,14 @@ export class Importer {
       const size = await fileSize(file)
       const title = tags.title || titleFromFileName(file)
 
+      // A previous import of this exact file may have stored the episode
+      // without a path. Repair that row before title-matching, so the file
+      // is not attached to a different episode.
+      if (this.deps.episodes.repairNullFilePath(`import:${file}`, file, size)) {
+        matched += 1
+        continue
+      }
+
       const matchedId = this.findMatch(title, tags, index)
       if (matchedId !== null) {
         this.deps.episodes.attachFile(matchedId, file, size, tags.duration)
@@ -165,7 +173,9 @@ export class Importer {
           releaseDate: tags.year ? new Date(tags.year, 0, 1).getTime() : null,
           episodeNumber: null,
           seasonNumber: null,
-          artworkUrl: null
+          artworkUrl: null,
+          filePath: file,
+          fileSize: size
         })
         // Make the new row visible to later files in this same run.
         const normalisedNew = normaliseTitle(title)

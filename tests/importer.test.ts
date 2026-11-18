@@ -119,5 +119,47 @@ describe('Importer service', () => {
     // And an additional episode was created for the second duplicate
     const all = episodes.listForPodcast(podcast.id)
     expect(all.length).toBe(2)
+
+    const added = all.find((row) => row.id !== epId)
+    expect(added?.file_path).toBe('/audio/Special Episode duplicate.mp3')
+    expect(added?.file_size).toBe(2048)
+    expect(added?.download_state).toBe('done')
+    expect(isSupportedAudio(added!.file_path!)).toBe(true)
+  })
+
+  it('repairs an existing import whose file path was never stored', async () => {
+    const file = '/audio/lonely-show.mp3'
+    vi.spyOn(fsHelpers, 'listFilesRecursive').mockResolvedValue([file])
+    vi.spyOn(fsHelpers, 'fileSize').mockResolvedValue(4096)
+    vi.mocked(parseFile).mockResolvedValue({
+      common: { title: 'Lonely Episode', album: 'Lonely Show' },
+      format: { duration: 90 }
+    } as any)
+
+    const first = await importer.run(['/audio'])
+    expect(first.filesAdded).toBe(1)
+
+    const podcast = podcasts.list(true).find((item) => item.title === 'Lonely Show')
+    expect(podcast).toBeDefined()
+    const created = episodes.listForPodcast(podcast!.id)[0]
+    expect(created.file_path).toBe(file)
+
+    // Simulate a row written before file_path was persisted, and rename it so
+    // a title match cannot be what fills the path back in.
+    db.prepare(
+      'UPDATE episodes SET file_path = NULL, file_size = NULL, title = ? WHERE id = ?'
+    ).run('Renamed In Db', created.id)
+
+    const second = await importer.run(['/audio'])
+    expect(second.filesMatched).toBe(1)
+    expect(second.filesAdded).toBe(0)
+
+    const repaired = episodes.getById(created.id)!
+    expect(repaired.file_path).toBe(file)
+    expect(repaired.file_size).toBe(4096)
+    expect(repaired.download_state).toBe('done')
+    expect(repaired.title).toBe('Renamed In Db')
+    expect(isSupportedAudio(repaired.file_path!)).toBe(true)
+    expect(episodes.listForPodcast(podcast!.id)).toHaveLength(1)
   })
 })
