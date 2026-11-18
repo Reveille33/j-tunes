@@ -14,11 +14,11 @@ export function registerSettingsHandlers(ctx: AppContext): void {
 
   ipcMain.handle(IPC.SETTINGS_SET, (_event, raw: unknown) => {
     const { key, value } = settingsSetSchema.parse(raw)
-    ctx.settings.set(key as keyof AppSettings, value as AppSettings[keyof AppSettings])
+    ctx.settings.set(key, value)
 
     // Keep the window's native theme in step with the in-app theme.
     if (key === 'theme') {
-      const theme = value as Theme
+      const theme: Theme = value
       BrowserWindow.getAllWindows().forEach((win) => {
         win.setTitleBarOverlay?.({
           color: theme === 'dark' ? '#181a1f' : '#f5f6f8',

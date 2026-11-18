@@ -120,9 +120,15 @@ export const settingKeySchema = z.enum([
   'notifyOnNewEpisodes'
 ])
 
-export const settingsSetSchema = z.object({
-  key: settingKeySchema,
-  value: z.unknown()
-})
+export const settingsSetSchema = z.discriminatedUnion('key', [
+  z.object({ key: z.literal('theme'), value: themeSchema }),
+  z.object({ key: z.literal('downloadDir'), value: z.string().max(4096) }),
+  z.object({ key: z.literal('autoDownloadDefault'), value: z.boolean() }),
+  z.object({ key: z.literal('globalDescriptionsVisible'), value: z.boolean() }),
+  z.object({ key: z.literal('lastPlaybackSpeed'), value: z.number().min(0.5).max(4) }),
+  z.object({ key: z.literal('defaultVolume'), value: z.number().min(0).max(1) }),
+  z.object({ key: z.literal('checkUpdatesOnStartup'), value: z.boolean() }),
+  z.object({ key: z.literal('notifyOnNewEpisodes'), value: z.boolean() })
+])
 
 export type EpisodeQueryInput = z.infer<typeof episodeQuerySchema>
