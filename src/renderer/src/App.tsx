@@ -17,6 +17,7 @@ import { OpmlImportDialog } from './components/podcasts/OpmlImportDialog'
 import { CommandPalette } from './components/CommandPalette'
 import { ShortcutsDialog } from './components/ShortcutsDialog'
 import { useUiStore } from './state/uiStore'
+import { canPersistSetting } from '@shared/settingsPersist'
 import { usePodcastStore } from './state/podcastStore'
 import { useEpisodeStore } from './state/episodeStore'
 import { usePlayerStore } from './state/playerStore'
@@ -68,6 +69,7 @@ export function App(): React.JSX.Element {
   const addManyToQueue = useQueueStore((s) => s.addMany)
 
   const { refresh, loadMore } = useEpisodes()
+  const settingsHydrated = useRef(false)
 
   // A ref lets the stable onEnded callback drive the player without a circular
   // dependency between the hook and the object it returns.
@@ -115,6 +117,7 @@ export function App(): React.JSX.Element {
     void (async () => {
       try {
         const settings = await window.api.getSettings()
+        settingsHydrated.current = true
         useUiStore.setState({
           theme: settings.theme,
           descriptionsVisible: settings.globalDescriptionsVisible
@@ -133,9 +136,11 @@ export function App(): React.JSX.Element {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
 
-  // Persist the description visibility preference.
+  // Persist the description visibility preference only after the saved
+  // value has been loaded. Writing the default first would overwrite it.
   const descriptionsVisible = useUiStore((s) => s.descriptionsVisible)
   useEffect(() => {
+    if (!canPersistSetting(settingsHydrated.current)) return
     void window.api.setSetting('globalDescriptionsVisible', descriptionsVisible)
   }, [descriptionsVisible])
 

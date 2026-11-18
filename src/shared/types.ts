@@ -28,6 +28,8 @@ export interface Podcast {
   language: string | null
   link: string | null
   lastCheckedAt: number | null
+  /** Set when the latest feed refresh failed. Cleared on the next success. */
+  lastError: string | null
   lastEpisodeAt: number | null
   episodeCount: number
   subscribedAt: number

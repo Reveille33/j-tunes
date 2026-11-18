@@ -86,4 +86,23 @@ describe('continuous playback', () => {
     episodes.setPlayedMany(ids, true)
     expect(playback.next(a)).toBeNull()
   })
+
+  it('continues in (release_date, id) order and skips episodes with no source', () => {
+    const podcast = podcasts.create({ feedUrl: 'https://x/order.xml', title: 'Order' })
+    const sameDay = new Date(2024, 5, 1).getTime()
+    const [newerDate, sameEarly, sameLate, silent] = episodes.insertMany(podcast.id, [
+      ep({ guid: 'newer', title: 'Newer day', releaseDate: sameDay + 86_400_000 }),
+      ep({ guid: 'early', title: 'Same day early', releaseDate: sameDay }),
+      ep({ guid: 'late', title: 'Same day late', releaseDate: sameDay }),
+      ep({ guid: 'silent', title: 'No source', releaseDate: sameDay + 1000, mediaUrl: null })
+    ])
+    db.prepare('UPDATE episodes SET file_path = ? WHERE id = ?').run('/library/early.mp3', sameEarly)
+    db.prepare('UPDATE episodes SET media_url = NULL WHERE id = ?').run(sameEarly)
+
+    // Newest-first is newerDate, then sameLate (higher id), then sameEarly.
+    expect(playback.next(newerDate)?.id).toBe(sameLate)
+    expect(playback.next(sameLate)?.id).toBe(sameEarly)
+    expect(playback.next(sameEarly)?.id).toBe(newerDate)
+    expect(silent).toBeGreaterThan(0)
+  })
 })

@@ -15,6 +15,7 @@ function podcast(over: Partial<Podcast> = {}): Podcast {
     language: null,
     link: null,
     lastCheckedAt: null,
+    lastError: null,
     lastEpisodeAt: null,
     episodeCount: 0,
     subscribedAt: 0,

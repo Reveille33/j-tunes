@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { usePlayerStore } from '../state/playerStore'
 import { useUiStore } from '../state/uiStore'
 import { useEpisodeStore } from '../state/episodeStore'
+import { playbackErrorMessage } from '@shared/playbackError'
 import {
   PLAYBACK_SPEEDS,
   POSITION_SAVE_INTERVAL_MS,
@@ -64,7 +65,13 @@ export function usePlayer(
         audio.currentTime >= total - RESUME_TAIL_SECONDS
       ) {
         autoMarkedRef.current = true
-        void window.api.setPlayed(id, true)
+        const position = audio.currentTime
+        const duration = audio.duration || 0
+        // Save the playhead before mark-played clears it, so the tail is
+        // counted once and the following save is not a jump from zero.
+        void window.api.savePlaybackPosition(id, position, duration).then(() => {
+          void window.api.setPlayed(id, true)
+        })
         const current = useEpisodeStore.getState().episodes.find((e) => e.id === id)
         if (current && !current.played) {
           useEpisodeStore.getState().updateEpisode({ ...current, played: true })
@@ -85,6 +92,13 @@ export function usePlayer(
     const onPause = () => store.setPlaying(false)
     const onWaiting = () => store.setLoading(true)
     const onPlaying = () => store.setLoading(false)
+    const onError = () => {
+      const message = playbackErrorMessage(audio.error?.code)
+      usePlayerStore.getState().setError(message)
+      usePlayerStore.getState().setPlaying(false)
+      usePlayerStore.getState().setLoading(false)
+      useUiStore.getState().showToast(message, 'error')
+    }
     const onEndedHandler = () => {
       store.setPlaying(false)
       store.setPosition(audio.duration || 0)
@@ -102,6 +116,7 @@ export function usePlayer(
     audio.addEventListener('waiting', onWaiting)
     audio.addEventListener('playing', onPlaying)
     audio.addEventListener('ended', onEndedHandler)
+    audio.addEventListener('error', onError)
 
     return () => {
       audio.removeEventListener('timeupdate', onTimeUpdate)
@@ -113,6 +128,7 @@ export function usePlayer(
       audio.removeEventListener('waiting', onWaiting)
       audio.removeEventListener('playing', onPlaying)
       audio.removeEventListener('ended', onEndedHandler)
+      audio.removeEventListener('error', onError)
     }
   }, [audio, savePosition, onEnded])
 

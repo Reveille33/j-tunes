@@ -1,4 +1,5 @@
 import { BrowserWindow, shell } from 'electron'
+import { themeArgument } from '@shared/themeArg'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
@@ -28,6 +29,7 @@ export function createWindow(options: {
     autoHideMenuBar: false,
     webPreferences: {
       preload: options.preloadPath,
+      additionalArguments: [themeArgument(options.theme)],
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,

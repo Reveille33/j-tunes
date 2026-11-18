@@ -76,6 +76,19 @@ export class UpdateService {
           outcome.added += result.added
           if (result.error) outcome.errors += 1
           done += 1
+          if (result.error) {
+            this.progress({
+              podcastId: result.podcastId,
+              podcastTitle: result.podcastTitle,
+              done,
+              total,
+              found: 0,
+              added: 0,
+              status: 'error',
+              message: result.error
+            })
+            continue
+          }
           this.progress({
             podcastId: result.podcastId,
             podcastTitle: result.podcastTitle,
@@ -83,8 +96,7 @@ export class UpdateService {
             total,
             found: result.found,
             added: result.added,
-            status: result.error ? 'error' : 'done',
-            message: result.error
+            status: 'done'
           })
         }
       }
@@ -125,6 +137,7 @@ export class UpdateService {
       })
 
       if (result.notModified || !result.feed) {
+        this.deps.podcasts.setLastError(podcast.id, null)
         this.deps.podcasts.setChecked(podcast.id, null, null)
         return {
           podcastId: podcast.id,
@@ -154,6 +167,7 @@ export class UpdateService {
       // and file_path; insertMany refreshes title and media fields that changed.
       const newIds = this.deps.episodes.insertMany(podcast.id, feed.episodes)
       this.deps.podcasts.refreshCounters(podcast.id)
+      this.deps.podcasts.setLastError(podcast.id, null)
       this.deps.podcasts.setChecked(podcast.id, null, null)
 
       if (newIds.length > 0) {
@@ -167,14 +181,16 @@ export class UpdateService {
         added: newIds.length
       }
     } catch (error) {
-      // A failing feed must never delete existing episodes.
-      this.deps.podcasts.setChecked(podcast.id, null, null)
+      // A failing feed must never delete existing episodes or look like a
+      // successful check that found nothing.
+      const message = (error as Error).message
+      this.deps.podcasts.setLastError(podcast.id, message.slice(0, 500))
       return {
         podcastId: podcast.id,
         podcastTitle: podcast.title,
         found: 0,
         added: 0,
-        error: (error as Error).message
+        error: message
       }
     }
   }

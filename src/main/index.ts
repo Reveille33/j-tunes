@@ -7,6 +7,7 @@ import { createWindow, resolvePreloadPath } from './window'
 import { buildApplicationMenu } from './menu'
 import { runUpdateSweep } from './ipc/updates.ipc'
 import { authorizeLocalFile, parseMediaEpisodeId, serveLocalFile } from './services/mediaAccess'
+import { bindSingleInstance } from './singleInstance'
 
 // Screenshot runs point the app at a throwaway profile. Unset in normal use.
 const userDataOverride = process.env.JTUNES_USER_DATA
@@ -32,16 +33,10 @@ protocol.registerSchemesAsPrivileged([
 let mainWindow: BrowserWindow | null = null
 let appContext: AppContext | null = null
 
-/** Only one instance of j-Tunes may run at a time. */
-if (!app.requestSingleInstanceLock()) {
-  app.quit()
-} else {
-  app.on('second-instance', () => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore()
-      mainWindow.focus()
-    }
-  })
+function focusExistingWindow(): void {
+  if (!mainWindow) return
+  if (mainWindow.isMinimized()) mainWindow.restore()
+  mainWindow.focus()
 }
 
 function bootstrap(): void {
@@ -80,7 +75,7 @@ function bootstrap(): void {
   })
 }
 
-app.whenReady().then(() => {
+function start(): void {
   protocol.handle('media', async (request) => {
     try {
       const episodeId = parseMediaEpisodeId(request.url)
@@ -112,8 +107,21 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) bootstrap()
   })
-})
+}
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
+bindSingleInstance({
+  gotLock: app.requestSingleInstanceLock(),
+  quit: () => app.quit(),
+  on: (event, handler) => {
+    if (event === 'second-instance') app.on('second-instance', handler)
+    else app.on('window-all-closed', handler)
+  },
+  whenReady: (handler) => {
+    void app.whenReady().then(handler)
+  },
+  onSecondInstance: focusExistingWindow,
+  onReady: start,
+  onWindowAllClosed: () => {
+    if (process.platform !== 'darwin') app.quit()
+  }
 })

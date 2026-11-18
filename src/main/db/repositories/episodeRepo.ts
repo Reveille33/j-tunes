@@ -250,8 +250,9 @@ export class EpisodeRepo {
 
   /**
    * The next unplayed episode to play after `currentId`, for continuous
-   * playback. Follows the default (newest-first) list order: the closest older
-   * unplayed episode, wrapping around to the newest when there is none.
+   * playback. Follows newest-first order on (release_date, id): the closest
+   * earlier row, wrapping to the newest playable episode when there is none.
+   * An episode with neither a media URL nor a downloaded file is skipped.
    */
   nextUnplayedAfter(
     releaseDate: number | null,
@@ -259,18 +260,25 @@ export class EpisodeRepo {
     podcastId: number | null
   ): number | null {
     const podcastClause = podcastId != null ? ' AND podcast_id = @podcastId' : ''
+    const playable = ` AND (
+      (media_url IS NOT NULL AND media_url != '')
+      OR (file_path IS NOT NULL AND file_path != '')
+    )`
 
     const olderParams: Record<string, unknown> = {
       currentId,
-      releaseDate: releaseDate ?? Number.MAX_SAFE_INTEGER
+      releaseDate: releaseDate ?? 0
     }
     if (podcastId != null) olderParams.podcastId = podcastId
 
     const older = this.db
       .prepare(
         `SELECT id FROM episodes
-         WHERE played = 0 AND id != @currentId${podcastClause}
-           AND COALESCE(release_date, 0) < @releaseDate
+         WHERE played = 0 AND id != @currentId${podcastClause}${playable}
+           AND (
+             COALESCE(release_date, 0) < @releaseDate
+             OR (COALESCE(release_date, 0) = @releaseDate AND id < @currentId)
+           )
          ORDER BY COALESCE(release_date, 0) DESC, id DESC
          LIMIT 1`
       )
@@ -283,7 +291,7 @@ export class EpisodeRepo {
     const wrapped = this.db
       .prepare(
         `SELECT id FROM episodes
-         WHERE played = 0 AND id != @currentId AND media_url IS NOT NULL${podcastClause}
+         WHERE played = 0 AND id != @currentId${podcastClause}${playable}
          ORDER BY COALESCE(release_date, 0) DESC, id DESC
          LIMIT 1`
       )

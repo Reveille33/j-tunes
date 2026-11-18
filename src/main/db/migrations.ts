@@ -160,5 +160,11 @@ ALTER TABLE episodes ADD COLUMN chapters_url TEXT;
 -- in-flight work after a restart, so the unused table is removed.
 DROP TABLE IF EXISTS download_queue;
 `
+  },
+  {
+    version: '004_podcast_last_error',
+    sql: `
+ALTER TABLE podcasts ADD COLUMN last_error TEXT;
+`
   }
 ]

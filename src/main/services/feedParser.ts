@@ -207,6 +207,13 @@ function parseRssItem(item: XmlNode): ParsedEpisode | null {
   }
 }
 
+/** An Atom link is an enclosure only when it says so, or its type is audio or video. */
+function isAtomEnclosure(rel: string | null, type: string | null): boolean {
+  if (rel === 'enclosure') return true
+  const mime = (type ?? '').split(';')[0].trim().toLowerCase()
+  return mime.startsWith('audio/') || mime.startsWith('video/')
+}
+
 function parseAtomEntry(entry: XmlNode): ParsedEpisode | null {
   const title = firstText(entry.title)
   if (!title) return null
@@ -219,13 +226,14 @@ function parseAtomEntry(entry: XmlNode): ParsedEpisode | null {
   for (const link of links) {
     const rel = attr(link, 'rel')
     const href = attr(link, 'href')
-    if (!href) continue
-    if (rel === 'enclosure' || (!rel && !mediaUrl)) {
-      mediaUrl = href
-      mediaType = attr(link, 'type')
-      const len = firstNumber(attr(link, 'length'))
-      if (len !== null) mediaLength = len
-    }
+    const type = attr(link, 'type')
+    if (!href || !isAtomEnclosure(rel, type)) continue
+    if (mediaUrl && rel !== 'enclosure') continue
+    mediaUrl = href
+    mediaType = type
+    const len = firstNumber(attr(link, 'length'))
+    if (len !== null) mediaLength = len
+    if (rel === 'enclosure') break
   }
 
   const descriptionHtml = firstText(entry.content, entry.summary)
