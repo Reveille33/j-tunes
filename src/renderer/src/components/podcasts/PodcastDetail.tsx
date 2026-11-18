@@ -90,6 +90,12 @@ export function PodcastDetail({
               <span>Checked {formatDate(podcast.lastCheckedAt)}</span>
             </>
           ) : null}
+          {podcast.lastError ? (
+            <>
+              <span className="dot">·</span>
+              <span title={podcast.lastError}>Last refresh failed</span>
+            </>
+          ) : null}
         </div>
 
         {podcast.description ? (

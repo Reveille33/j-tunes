@@ -13,6 +13,7 @@ interface PodcastRow {
   language: string | null
   link: string | null
   last_checked_at: number | null
+  last_error: string | null
   last_episode_at: number | null
   episode_count: number
   subscribed_at: number
@@ -34,6 +35,7 @@ function toPodcast(row: PodcastRow): Podcast {
     language: row.language,
     link: row.link,
     lastCheckedAt: row.last_checked_at,
+    lastError: row.last_error,
     lastEpisodeAt: row.last_episode_at,
     episodeCount: row.episode_count,
     subscribedAt: row.subscribed_at,
@@ -168,6 +170,10 @@ export class PodcastRepo {
         etag: meta.etag ?? null,
         lastModified: meta.lastModified ?? null
       })
+  }
+
+  setLastError(id: number, message: string | null): void {
+    this.db.prepare('UPDATE podcasts SET last_error = ? WHERE id = ?').run(message, id)
   }
 
   setChecked(id: number, etag: string | null, lastModified: string | null): void {
