@@ -21,10 +21,18 @@ nsis:
   createDesktopShortcut: true
   shortcutName: j-Tunes
 mac:
+  # Unsigned on purpose. null skips the keychain lookup so packaging does not
+  # fail when no Apple Developer certificate is installed. A universal binary
+  # is not built: better-sqlite3 ships separate arm64 and x64 prebuilds.
+  identity: null
+  icon: icon.icns
   category: public.app-category.music
+  artifactName: ${productName}-${version}-${arch}.${ext}
   target:
-    - dmg
-    - zip
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
   extendInfo:
     NSMicrophoneUsageDescription: j-Tunes does not record audio.
 linux:
@@ -32,4 +40,7 @@ linux:
   target:
     - AppImage
     - deb
+# Native modules are not compiled. Mac packaging copies the matching
+# better-sqlite3 prebuild in scripts/stage-sqlite.cjs before each arch.
 npmRebuild: false
+beforePack: scripts/stage-sqlite.cjs

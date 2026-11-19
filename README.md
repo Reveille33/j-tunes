@@ -21,6 +21,8 @@ A desktop podcast player for a large local library: subscribe, download, and lis
 
 Windows installers are published on [GitHub Releases](https://github.com/Reveille33/j-tunes/releases). The installer is unsigned, so Windows SmartScreen will warn before it runs.
 
+A Mac build is unsigned. The first time you open it, Gatekeeper blocks it. Right-click the app and choose **Open**, or go to **System Settings > Privacy & Security** and choose **Open Anyway**.
+
 ## Build from source
 
 ```bash
@@ -35,6 +37,8 @@ A Windows installer has to be built on Windows (`better-sqlite3` is native, and 
 ```bash
 npm run build && npx electron-builder --win nsis --publish never
 ```
+
+On a Mac, `npm run dist:mac` builds unsigned Apple silicon and Intel disk images and zips (`release/j-Tunes-<version>-arm64.dmg` and `release/j-Tunes-<version>-x64.dmg`, plus matching `.zip` files). Each package gets the `better-sqlite3` prebuild for that architecture. The first launch of an unsigned app is blocked by Gatekeeper: right-click the app and choose **Open**, or go to **System Settings > Privacy & Security** and choose **Open Anyway**.
 
 `--publish never` writes the installer under `release/` and does not publish a release. `npm run screenshots` rebuilds the app and refreshes the PNGs in `docs/screenshots/` from invented demo data.
 

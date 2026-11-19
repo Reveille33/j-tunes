@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const SIZES = [16, 24, 32, 48, 64, 128, 256]
+const ICNS_SIZES = [...SIZES, 512, 1024]
 
 /** The j-Tunes mark: a rounded square with a music note. */
 function pixel(x, y, size) {
@@ -168,7 +169,7 @@ function buildIcns(entries) {
 
 mkdirSync(here, { recursive: true })
 
-const rendered = new Map(SIZES.map((size) => [size, encodePng(renderRgba(size), size)]))
+const rendered = new Map(ICNS_SIZES.map((size) => [size, encodePng(renderRgba(size), size)]))
 
 writeFileSync(join(here, 'icon.png'), rendered.get(256))
 writeFileSync(join(here, 'icon.ico'), buildIco(SIZES.map((size) => ({ size, png: rendered.get(size) }))))
@@ -179,9 +180,11 @@ writeFileSync(
     { type: 'icp5', png: rendered.get(32) },
     { type: 'icp6', png: rendered.get(64) },
     { type: 'ic07', png: rendered.get(128) },
-    { type: 'ic08', png: rendered.get(256) }
+    { type: 'ic08', png: rendered.get(256) },
+    { type: 'ic09', png: rendered.get(512) },
+    { type: 'ic10', png: rendered.get(1024) }
   ])
 )
 
-console.log(`Wrote icon.png, icon.ico (${SIZES.join(', ')} px) and icon.icns`)
+console.log(`Wrote icon.png, icon.ico (${SIZES.join(', ')} px) and icon.icns (${ICNS_SIZES.join(', ')} px)`)
 
