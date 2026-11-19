@@ -47,7 +47,9 @@ describe('stage better-sqlite3 per arch', () => {
   it('fails when that arch has no prebuild', () => {
     const root = mkdtempSync(join(tmpdir(), 'sqlite-stage-'))
     try {
-      expect(() => stageSqlite(root, 'darwin', 'arm64')).toThrow(/Missing prebuilds\/darwin-arm64.node/)
+      expect(() => stageSqlite(root, 'darwin', 'arm64')).toThrow(
+        /Missing prebuilds[/\\]darwin-arm64\.node/
+      )
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
