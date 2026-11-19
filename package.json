@@ -1,6 +1,6 @@
 {
   "name": "j-tunes",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "A streamlined, highly performant desktop podcast manager and player.",
   "main": "./out/main/index.js",
   "author": "j-Tunes",
