@@ -3,6 +3,7 @@ import { useUiStore } from '../../state/uiStore'
 import { useEpisodeStore } from '../../state/episodeStore'
 import { useQueueStore } from '../../state/queueStore'
 import { formatDate, formatDuration } from '../../utils/format'
+import { episodeDescriptionDisplay } from '@shared/descriptionDisplay'
 import type { DownloadState, Episode } from '@shared/types'
 
 interface EpisodeRowProps {
@@ -13,12 +14,13 @@ interface EpisodeRowProps {
 /**
  * A single row in the episode list.
  *
- * Descriptions are shown briefly by default and can be expanded per episode
- * by clicking them; a global toggle controls whether descriptions appear at
- * all.
+ * Descriptions are one line by default and can be expanded per episode.
+ * "Show descriptions" controls whether they appear. "Show full descriptions"
+ * renders the whole plain-text description with no clamp.
  */
 export const EpisodeRow = memo(function EpisodeRow({ episode, onPlay }: EpisodeRowProps) {
   const descriptionsVisible = useUiStore((s) => s.descriptionsVisible)
+  const descriptionsFull = useUiStore((s) => s.descriptionsFull)
   const expanded = useUiStore((s) => s.expandedEpisodes.has(episode.id))
   const toggleEpisodeExpanded = useUiStore((s) => s.toggleEpisodeExpanded)
   const showToast = useUiStore((s) => s.showToast)
@@ -28,7 +30,8 @@ export const EpisodeRow = memo(function EpisodeRow({ episode, onPlay }: EpisodeR
   const addToQueue = useQueueStore((s) => s.add)
 
   const isDownloaded = episode.downloadState === 'done'
-  const isExpanded = descriptionsVisible && expanded
+  const descriptionMode = episodeDescriptionDisplay(descriptionsVisible, descriptionsFull, expanded)
+  const isExpanded = descriptionMode === 'capped' || descriptionMode === 'full'
   /** Per-episode art when the feed has one, otherwise the show's artwork. */
   const artworkUrl = episode.artworkUrl ?? episode.podcastArtworkUrl
   /** Streamable when it has a remote URL, even if it was never downloaded. */
@@ -160,31 +163,35 @@ export const EpisodeRow = memo(function EpisodeRow({ episode, onPlay }: EpisodeR
           ) : null}
         </div>
 
-        {descriptionsVisible && episode.description ? (
-          <div
-            className={`episode-row-description${isExpanded ? ' is-expanded' : ''}`}
-            onClick={(event) => {
-              event.stopPropagation()
-              toggleEpisodeExpanded(episode.id)
-            }}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
+        {descriptionMode !== 'hidden' && episode.description ? (
+          descriptionMode === 'full' ? (
+            <div className="episode-row-description is-full">
+              <div className="episode-row-description-full is-full">{episode.description}</div>
+            </div>
+          ) : (
+            <div
+              className={`episode-row-description${isExpanded ? ' is-expanded' : ''}`}
+              onClick={(event) => {
+                event.stopPropagation()
                 toggleEpisodeExpanded(episode.id)
-              }
-            }}
-            title={isExpanded ? undefined : 'Click to expand'}
-          >
-            {isExpanded ? (
-              <div className="episode-row-description-full">
-                {episode.description}
-              </div>
-            ) : (
-              <div className="description-brief">{episode.description}</div>
-            )}
-          </div>
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  toggleEpisodeExpanded(episode.id)
+                }
+              }}
+              title={isExpanded ? undefined : 'Click to expand'}
+            >
+              {isExpanded ? (
+                <div className="episode-row-description-full">{episode.description}</div>
+              ) : (
+                <div className="description-brief">{episode.description}</div>
+              )}
+            </div>
+          )
         ) : null}
       </div>
 

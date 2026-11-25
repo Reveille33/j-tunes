@@ -221,6 +221,10 @@ describe('database layer', () => {
     const all = settings.getAll()
     expect(all.theme).toBe('light')
     expect(all.globalDescriptionsVisible).toBe(true)
+    expect(all.showFullDescriptions).toBe(false)
+
+    settings.set('showFullDescriptions', true)
+    expect(settings.getAll().showFullDescriptions).toBe(true)
   })
 
   it('lists distinct years newest first', () => {

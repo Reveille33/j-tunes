@@ -11,6 +11,7 @@ describe('settings:set schema', () => {
     expect(
       settingsSetSchema.parse({ key: 'globalDescriptionsVisible', value: true }).value
     ).toBe(true)
+    expect(settingsSetSchema.parse({ key: 'showFullDescriptions', value: true }).value).toBe(true)
   })
 
   it('rejects a value of the wrong type for that key', () => {
@@ -18,5 +19,6 @@ describe('settings:set schema', () => {
     expect(() => settingsSetSchema.parse({ key: 'autoDownloadDefault', value: 'yes' })).toThrow()
     expect(() => settingsSetSchema.parse({ key: 'defaultVolume', value: 2 })).toThrow()
     expect(() => settingsSetSchema.parse({ key: 'downloadDir', value: 12 })).toThrow()
+    expect(() => settingsSetSchema.parse({ key: 'showFullDescriptions', value: 'yes' })).toThrow()
   })
 })

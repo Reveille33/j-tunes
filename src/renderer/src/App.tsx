@@ -120,7 +120,8 @@ export function App(): React.JSX.Element {
         settingsHydrated.current = true
         useUiStore.setState({
           theme: settings.theme,
-          descriptionsVisible: settings.globalDescriptionsVisible
+          descriptionsVisible: settings.globalDescriptionsVisible,
+          descriptionsFull: settings.showFullDescriptions
         })
         usePlayerStore.getState().setRate(settings.lastPlaybackSpeed)
         usePlayerStore.getState().setVolume(settings.defaultVolume)
@@ -139,10 +140,15 @@ export function App(): React.JSX.Element {
   // Persist the description visibility preference only after the saved
   // value has been loaded. Writing the default first would overwrite it.
   const descriptionsVisible = useUiStore((s) => s.descriptionsVisible)
+  const descriptionsFull = useUiStore((s) => s.descriptionsFull)
   useEffect(() => {
     if (!canPersistSetting(settingsHydrated.current)) return
     void window.api.setSetting('globalDescriptionsVisible', descriptionsVisible)
   }, [descriptionsVisible])
+  useEffect(() => {
+    if (!canPersistSetting(settingsHydrated.current)) return
+    void window.api.setSetting('showFullDescriptions', descriptionsFull)
+  }, [descriptionsFull])
 
   // Auto-dismiss the toast.
   useEffect(() => {

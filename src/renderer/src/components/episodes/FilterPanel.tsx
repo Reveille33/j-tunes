@@ -30,6 +30,8 @@ export function FilterPanel(): React.JSX.Element {
   const setYear = useUiStore((s) => s.setYear)
   const descriptionsVisible = useUiStore((s) => s.descriptionsVisible)
   const setDescriptionsVisible = useUiStore((s) => s.setDescriptionsVisible)
+  const descriptionsFull = useUiStore((s) => s.descriptionsFull)
+  const setDescriptionsFull = useUiStore((s) => s.setDescriptionsFull)
   const descriptionTerm = useUiStore((s) => s.descriptionTerm)
   const setDescriptionTerm = useUiStore((s) => s.setDescriptionTerm)
   const years = usePodcastStore((s) => s.years)
@@ -115,6 +117,14 @@ export function FilterPanel(): React.JSX.Element {
             onChange={(event) => setDescriptionsVisible(event.target.checked)}
           />
           <span>Show descriptions</span>
+        </label>
+        <label className="filter-toggle">
+          <input
+            type="checkbox"
+            checked={descriptionsFull}
+            onChange={(event) => setDescriptionsFull(event.target.checked)}
+          />
+          <span>Show full descriptions</span>
         </label>
       </div>
     </div>
