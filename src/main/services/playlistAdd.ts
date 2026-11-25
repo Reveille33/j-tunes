@@ -1,6 +1,7 @@
 import type { PlaylistRepo } from '../db/repositories/playlistRepo'
+import type { SearchRepo } from '../db/repositories/searchRepo'
 import type { PlaylistAddInput } from '@shared/validation'
-import type { PlaylistAddResult } from '@shared/types'
+import type { Episode, PlaylistAddResult, PlaylistSummary } from '@shared/types'
 
 /**
  * Adds episodes to an existing playlist, or creates one and then adds them.
@@ -18,4 +19,15 @@ export function addEpisodesToPlaylist(
   const playlist = playlists.getById(playlistId)
   if (!playlist) throw new Error('Playlist not found')
   return { playlist, ...counts }
+}
+
+/** A playlist and its episodes, in playlist order. */
+export function readPlaylist(
+  playlists: PlaylistRepo,
+  search: SearchRepo,
+  playlistId: number
+): { playlist: PlaylistSummary; episodes: Episode[] } {
+  const playlist = playlists.getById(playlistId)
+  if (!playlist) throw new Error('Playlist not found')
+  return { playlist, episodes: search.listByIds(playlists.episodeIds(playlistId)) }
 }

@@ -1,9 +1,14 @@
 import { BrowserWindow, ipcMain, Menu } from 'electron'
 import { IPC } from '@shared/ipc'
 import { addToPlaylistMenu } from '@shared/playlistMenu'
-import { episodeContextMenuSchema, playlistAddSchema } from '@shared/validation'
+import {
+  episodeContextMenuSchema,
+  playlistAddSchema,
+  playlistIdSchema,
+  playlistRemoveSchema
+} from '@shared/validation'
 import type { AppContext } from '../appContext'
-import { addEpisodesToPlaylist } from '../services/playlistAdd'
+import { addEpisodesToPlaylist, readPlaylist } from '../services/playlistAdd'
 
 /** Electron treats a single ampersand as a mnemonic marker. */
 function menuLabel(label: string): string {
@@ -11,6 +16,18 @@ function menuLabel(label: string): string {
 }
 
 export function registerPlaylistHandlers(ctx: AppContext): void {
+  ipcMain.handle(IPC.PLAYLISTS_LIST, () => ctx.playlists.list())
+
+  ipcMain.handle(IPC.PLAYLISTS_GET, (_event, raw: unknown) => {
+    const { playlistId } = playlistIdSchema.parse(raw)
+    return readPlaylist(ctx.playlists, ctx.search, playlistId)
+  })
+
+  ipcMain.handle(IPC.PLAYLISTS_REMOVE, (_event, raw: unknown) => {
+    const { playlistId, episodeId } = playlistRemoveSchema.parse(raw)
+    ctx.playlists.removeEpisode(playlistId, episodeId)
+  })
+
   ipcMain.handle(IPC.PLAYLISTS_ADD, (_event, raw: unknown) => {
     const input = playlistAddSchema.parse(raw)
     return addEpisodesToPlaylist(ctx.playlists, input)

@@ -3,8 +3,14 @@ import { createInMemoryDb, type Db } from '../src/main/db/connection'
 import { PlaylistRepo } from '../src/main/db/repositories/playlistRepo'
 import { PodcastRepo } from '../src/main/db/repositories/podcastRepo'
 import { EpisodeRepo } from '../src/main/db/repositories/episodeRepo'
-import { addEpisodesToPlaylist } from '../src/main/services/playlistAdd'
-import { episodeContextMenuSchema, playlistAddSchema } from '../src/shared/validation'
+import { SearchRepo } from '../src/main/db/repositories/searchRepo'
+import { addEpisodesToPlaylist, readPlaylist } from '../src/main/services/playlistAdd'
+import {
+  episodeContextMenuSchema,
+  playlistAddSchema,
+  playlistIdSchema,
+  playlistRemoveSchema
+} from '../src/shared/validation'
 import {
   addToPlaylistMenu,
   episodeMenuTargets,
@@ -77,6 +83,28 @@ describe('playlists', () => {
     expect(() => playlists.addEpisodes(404, [episodeIds[0]])).toThrow('Playlist not found')
   })
 
+  it('removes one episode and keeps the remaining order', () => {
+    const playlist = playlists.create('Road trips')
+    playlists.addEpisodes(playlist.id, episodeIds)
+    playlists.removeEpisode(playlist.id, episodeIds[1])
+    playlists.removeEpisode(playlist.id, 999999)
+    expect(playlists.episodeIds(playlist.id)).toEqual([episodeIds[0], episodeIds[2]])
+    expect(playlists.getById(playlist.id)?.episodeCount).toBe(2)
+    expect(() => playlists.removeEpisode(404, episodeIds[0])).toThrow('Playlist not found')
+  })
+
+  it('reads a playlist in saved order', () => {
+    const created = addEpisodesToPlaylist(playlists, {
+      target: 'new',
+      name: 'Morning',
+      episodeIds: [episodeIds[2], episodeIds[0]]
+    })
+    const detail = readPlaylist(playlists, new SearchRepo(db), created.playlist.id)
+    expect(detail.playlist.name).toBe('Morning')
+    expect(detail.episodes.map((episode) => episode.guid)).toEqual(['c', 'a'])
+    expect(() => readPlaylist(playlists, new SearchRepo(db), 404)).toThrow('Playlist not found')
+  })
+
   it('creates a playlist from the add call and reports skips on a second add', () => {
     const created = addEpisodesToPlaylist(playlists, {
       target: 'new',
@@ -114,6 +142,12 @@ describe('playlist add schema', () => {
       playlistAddSchema.parse({ target: 'existing', playlistId: 1, episodeIds: [] })
     ).toThrow()
     expect(() => episodeContextMenuSchema.parse({ episodeIds: ['nope'] })).toThrow()
+    expect(() => playlistIdSchema.parse({ playlistId: 0 })).toThrow()
+    expect(() => playlistRemoveSchema.parse({ playlistId: 1, episodeId: 'x' })).toThrow()
+    expect(playlistRemoveSchema.parse({ playlistId: 2, episodeId: 5 })).toEqual({
+      playlistId: 2,
+      episodeId: 5
+    })
   })
 })
 

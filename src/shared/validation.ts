@@ -114,6 +114,15 @@ export const episodeContextMenuSchema = z.object({
   episodeIds: playlistEpisodeIdsSchema
 })
 
+export const playlistIdSchema = z.object({
+  playlistId: idSchema
+})
+
+export const playlistRemoveSchema = z.object({
+  playlistId: idSchema,
+  episodeId: idSchema
+})
+
 export type PlaylistAddInput = z.infer<typeof playlistAddSchema>
 
 export const queueReorderSchema = z.object({

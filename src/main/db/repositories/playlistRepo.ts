@@ -45,6 +45,16 @@ export class PlaylistRepo {
     return rows.map((row) => row.episode_id)
   }
 
+  /** Drops one episode from a playlist. Missing membership is a no-op. */
+  removeEpisode(playlistId: number, episodeId: number): void {
+    if (!this.db.prepare('SELECT 1 FROM playlists WHERE id = ?').get(playlistId)) {
+      throw new Error('Playlist not found')
+    }
+    this.db
+      .prepare('DELETE FROM playlist_episodes WHERE playlist_id = ? AND episode_id = ?')
+      .run(playlistId, episodeId)
+  }
+
   create(name: string): PlaylistSummary {
     const result = this.db
       .prepare('INSERT INTO playlists (name, created_at) VALUES (?, ?)')

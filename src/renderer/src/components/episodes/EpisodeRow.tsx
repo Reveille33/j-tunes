@@ -10,6 +10,8 @@ import type { DownloadState, Episode } from '@shared/types'
 interface EpisodeRowProps {
   episode: Episode
   onPlay: (episode: Episode) => void
+  /** When set, the row can drop this episode from the open playlist. */
+  onRemove?: (episode: Episode) => void
 }
 
 /**
@@ -19,7 +21,7 @@ interface EpisodeRowProps {
  * "Show descriptions" controls whether they appear. "Show full descriptions"
  * renders the whole plain-text description with no clamp.
  */
-export const EpisodeRow = memo(function EpisodeRow({ episode, onPlay }: EpisodeRowProps) {
+export const EpisodeRow = memo(function EpisodeRow({ episode, onPlay, onRemove }: EpisodeRowProps) {
   const descriptionsVisible = useUiStore((s) => s.descriptionsVisible)
   const descriptionsFull = useUiStore((s) => s.descriptionsFull)
   const expanded = useUiStore((s) => s.expandedEpisodes.has(episode.id))
@@ -212,6 +214,17 @@ export const EpisodeRow = memo(function EpisodeRow({ episode, onPlay }: EpisodeR
             : ''
         }`}
       >
+        {onRemove ? (
+          <button
+            className="icon-button"
+            onClick={() => onRemove(episode)}
+            title="Remove from playlist"
+            aria-label="Remove from playlist"
+          >
+            ×
+          </button>
+        ) : null}
+
         <button
           className="icon-button"
           onClick={() => void handleQueue()}

@@ -20,6 +20,8 @@ import type {
   OpmlImportProgress,
   OpmlImportSummary,
   PlaylistAddResult,
+  PlaylistDetail,
+  PlaylistSummary,
   Podcast,
   StorageSummary,
   Theme,
@@ -92,6 +94,11 @@ const api = {
     ipcRenderer.invoke(IPC.QUEUE_NEXT, { episodeId }),
 
   // Playlists
+  listPlaylists: (): Promise<PlaylistSummary[]> => ipcRenderer.invoke(IPC.PLAYLISTS_LIST),
+  getPlaylist: (playlistId: number): Promise<PlaylistDetail> =>
+    ipcRenderer.invoke(IPC.PLAYLISTS_GET, { playlistId }),
+  removeFromPlaylist: (playlistId: number, episodeId: number): Promise<void> =>
+    ipcRenderer.invoke(IPC.PLAYLISTS_REMOVE, { playlistId, episodeId }),
   addToPlaylist: (input: PlaylistAddInput): Promise<PlaylistAddResult> =>
     ipcRenderer.invoke(IPC.PLAYLISTS_ADD, input),
   showEpisodeMenu: (episodeIds: number[]): Promise<void> =>

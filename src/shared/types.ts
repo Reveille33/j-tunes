@@ -128,6 +128,12 @@ export interface PlaylistSummary {
   episodeCount: number
 }
 
+/** A playlist opened in the main view, episodes in saved order. */
+export interface PlaylistDetail {
+  playlist: PlaylistSummary
+  episodes: Episode[]
+}
+
 /** How many episodes an add actually inserted. Duplicates are skipped. */
 export interface PlaylistAddResult {
   playlist: PlaylistSummary

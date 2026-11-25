@@ -21,6 +21,8 @@ import type {
   OpmlImportProgress,
   OpmlImportSummary,
   PlaylistAddResult,
+  PlaylistDetail,
+  PlaylistSummary,
   Podcast,
   StorageSummary,
   Theme,
@@ -56,6 +58,9 @@ export const IPC = {
   QUEUE_NEXT: 'queue:next',
 
   // Playlists
+  PLAYLISTS_LIST: 'playlists:list',
+  PLAYLISTS_GET: 'playlists:get',
+  PLAYLISTS_REMOVE: 'playlists:remove',
   PLAYLISTS_ADD: 'playlists:add',
   EPISODES_CONTEXT_MENU: 'episodes:contextMenu',
   PLAYLISTS_ADD_EXISTING: 'playlists:addExisting',
@@ -142,6 +147,12 @@ export interface JTunesApi {
   autoAdvance(episodeId: number): Promise<Episode | null>
 
   // Playlists
+  /** Saved playlists, oldest first. */
+  listPlaylists(): Promise<PlaylistSummary[]>
+  /** One playlist and its episodes, in saved order. */
+  getPlaylist(playlistId: number): Promise<PlaylistDetail>
+  /** Removes one episode from a playlist. */
+  removeFromPlaylist(playlistId: number, episodeId: number): Promise<void>
   /** Adds episodes to a playlist. Episodes already in it are skipped. */
   addToPlaylist(input: PlaylistAddInput): Promise<PlaylistAddResult>
   /** Opens the native "Add to playlist" menu for these episodes. */
