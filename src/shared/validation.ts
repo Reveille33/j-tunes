@@ -94,6 +94,28 @@ export const queueAddManySchema = z.object({
   episodeIds: z.array(idSchema).max(2000)
 })
 
+const playlistEpisodeIdsSchema = z.array(idSchema).min(1).max(2000)
+
+/** Adds episodes to a playlist, or creates the playlist and then adds them. */
+export const playlistAddSchema = z.discriminatedUnion('target', [
+  z.object({
+    target: z.literal('existing'),
+    playlistId: idSchema,
+    episodeIds: playlistEpisodeIdsSchema
+  }),
+  z.object({
+    target: z.literal('new'),
+    name: z.string().trim().min(1).max(200),
+    episodeIds: playlistEpisodeIdsSchema
+  })
+])
+
+export const episodeContextMenuSchema = z.object({
+  episodeIds: playlistEpisodeIdsSchema
+})
+
+export type PlaylistAddInput = z.infer<typeof playlistAddSchema>
+
 export const queueReorderSchema = z.object({
   episodeIds: z.array(idSchema).max(2000)
 })

@@ -121,6 +121,20 @@ export interface ParsedEpisode {
   chaptersUrl?: string | null
 }
 
+/** A saved playlist, without its episode rows. */
+export interface PlaylistSummary {
+  id: number
+  name: string
+  episodeCount: number
+}
+
+/** How many episodes an add actually inserted. Duplicates are skipped. */
+export interface PlaylistAddResult {
+  playlist: PlaylistSummary
+  added: number
+  skipped: number
+}
+
 /** A chapter marker inside an episode. */
 export interface Chapter {
   id: number

@@ -4,6 +4,7 @@ import { useEpisodeStore } from '../../state/episodeStore'
 import { formatBytes, formatDate } from '../../utils/format'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { ConfirmDialog } from '../ConfirmDialog'
+import { openEpisodePlaylistMenu } from '../../playlistActions'
 import type { Episode, PodcastStorage, StorageSummary } from '@shared/types'
 
 interface StorageDialogProps {
@@ -222,7 +223,14 @@ export function StorageDialog({ onClose }: StorageDialogProps): React.JSX.Elemen
 
           <div className="storage-downloads">
             {visible.map((episode) => (
-              <label key={episode.id} className="storage-download">
+              <label
+                key={episode.id}
+                className="storage-download"
+                onContextMenu={(event) => {
+                  event.preventDefault()
+                  openEpisodePlaylistMenu(episode.id, selected)
+                }}
+              >
                 <input
                   type="checkbox"
                   checked={selected.has(episode.id)}

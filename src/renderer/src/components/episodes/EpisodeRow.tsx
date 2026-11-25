@@ -4,6 +4,7 @@ import { useEpisodeStore } from '../../state/episodeStore'
 import { useQueueStore } from '../../state/queueStore'
 import { formatDate, formatDuration } from '../../utils/format'
 import { episodeDescriptionDisplay } from '@shared/descriptionDisplay'
+import { openEpisodePlaylistMenu } from '../../playlistActions'
 import type { DownloadState, Episode } from '@shared/types'
 
 interface EpisodeRowProps {
@@ -115,7 +116,13 @@ export const EpisodeRow = memo(function EpisodeRow({ episode, onPlay }: EpisodeR
   }
 
   return (
-    <div className={`episode-row${episode.played ? ' is-played' : ''}`}>
+    <div
+      className={`episode-row${episode.played ? ' is-played' : ''}`}
+      onContextMenu={(event) => {
+        event.preventDefault()
+        openEpisodePlaylistMenu(episode.id, useUiStore.getState().selectedEpisodeIds)
+      }}
+    >
       <label className="episode-row-select" onClick={(event) => event.stopPropagation()}>
         <input
           type="checkbox"

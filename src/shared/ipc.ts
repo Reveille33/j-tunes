@@ -20,11 +20,13 @@ import type {
   OperationResult,
   OpmlImportProgress,
   OpmlImportSummary,
+  PlaylistAddResult,
   Podcast,
   StorageSummary,
   Theme,
   UpdateProgress
 } from './types'
+import type { PlaylistAddInput } from './validation'
 
 export const IPC = {
   // Podcasts
@@ -52,6 +54,12 @@ export const IPC = {
   QUEUE_CLEAR: 'queue:clear',
   QUEUE_REORDER: 'queue:reorder',
   QUEUE_NEXT: 'queue:next',
+
+  // Playlists
+  PLAYLISTS_ADD: 'playlists:add',
+  EPISODES_CONTEXT_MENU: 'episodes:contextMenu',
+  PLAYLISTS_ADD_EXISTING: 'playlists:addExisting',
+  PLAYLISTS_PROMPT_NEW: 'playlists:promptNew',
 
   // Updates
   UPDATES_CHECK: 'updates:check',
@@ -132,6 +140,18 @@ export interface JTunesApi {
   reorderQueue(episodeIds: number[]): Promise<void>
   /** Next episode to play after the given one (queue first, then library). */
   autoAdvance(episodeId: number): Promise<Episode | null>
+
+  // Playlists
+  /** Adds episodes to a playlist. Episodes already in it are skipped. */
+  addToPlaylist(input: PlaylistAddInput): Promise<PlaylistAddResult>
+  /** Opens the native "Add to playlist" menu for these episodes. */
+  showEpisodeMenu(episodeIds: number[]): Promise<void>
+  /** The context menu chose an existing playlist. */
+  onPlaylistAddExisting(
+    cb: (request: { playlistId: number; episodeIds: number[] }) => void
+  ): () => void
+  /** The context menu chose "New playlist…". */
+  onNewPlaylist(cb: (request: { episodeIds: number[] }) => void): () => void
 
   // Updates
   checkForUpdates(podcastId?: number): Promise<void>

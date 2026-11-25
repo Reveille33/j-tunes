@@ -1,4 +1,5 @@
 import { useUiStore } from '../../state/uiStore'
+import { openEpisodePlaylistMenu } from '../../playlistActions'
 import { usePodcastStore } from '../../state/podcastStore'
 import { useQueueStore } from '../../state/queueStore'
 import type { Episode } from '@shared/types'
@@ -113,7 +114,13 @@ export function Sidebar({
           <ul className="sidebar-list">
             {queueItems.map((item, index) => (
               <li key={item.id}>
-                <div className="sidebar-item sidebar-podcast">
+                <div
+                  className="sidebar-item sidebar-podcast"
+                  onContextMenu={(event) => {
+                    event.preventDefault()
+                    openEpisodePlaylistMenu(item.id, useUiStore.getState().selectedEpisodeIds)
+                  }}
+                >
                   <button
                     className="sidebar-item-main"
                     onClick={() => onPlay(item)}

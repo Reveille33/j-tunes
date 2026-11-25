@@ -16,6 +16,8 @@ import { ContinueListening } from './components/episodes/ContinueListening'
 import { OpmlImportDialog } from './components/podcasts/OpmlImportDialog'
 import { CommandPalette } from './components/CommandPalette'
 import { ShortcutsDialog } from './components/ShortcutsDialog'
+import { NewPlaylistDialog } from './components/playlists/NewPlaylistDialog'
+import { commitPlaylistAdd } from './playlistActions'
 import { useUiStore } from './state/uiStore'
 import { canPersistSetting } from '@shared/settingsPersist'
 import { usePodcastStore } from './state/podcastStore'
@@ -45,6 +47,7 @@ export function App(): React.JSX.Element {
   const setYears = usePodcastStore((s) => s.setYears)
 
   const [unsubscribeId, setUnsubscribeId] = useState<number | null>(null)
+  const [newPlaylistIds, setNewPlaylistIds] = useState<number[] | null>(null)
   const [checking, setChecking] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<string | null>(null)
   const [bulkBusy, setBulkBusy] = useState(false)
@@ -174,6 +177,21 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     return window.api.onSettingsOpen(() => setSettingsOpen(true))
   }, [setSettingsOpen])
+
+  // The episode context menu reports the playlist the user picked.
+  useEffect(() => {
+    return window.api.onPlaylistAddExisting((request) => {
+      void commitPlaylistAdd({
+        target: 'existing',
+        playlistId: request.playlistId,
+        episodeIds: request.episodeIds
+      })
+    })
+  }, [])
+
+  useEffect(() => {
+    return window.api.onNewPlaylist((request) => setNewPlaylistIds(request.episodeIds))
+  }, [])
 
   // Command palette (Ctrl/Cmd+K) and keyboard help (`?`).
   useEffect(() => {
@@ -404,6 +422,9 @@ export function App(): React.JSX.Element {
       {isShortcutsOpen ? <ShortcutsDialog onClose={() => setShortcutsOpen(false)} /> : null}
       {unsubscribeId !== null ? (
         <UnsubscribeDialog podcastId={unsubscribeId} onClose={() => setUnsubscribeId(null)} />
+      ) : null}
+      {newPlaylistIds !== null ? (
+        <NewPlaylistDialog episodeIds={newPlaylistIds} onClose={() => setNewPlaylistIds(null)} />
       ) : null}
 
       {toast ? (

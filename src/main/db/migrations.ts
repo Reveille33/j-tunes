@@ -166,5 +166,26 @@ DROP TABLE IF EXISTS download_queue;
     sql: `
 ALTER TABLE podcasts ADD COLUMN last_error TEXT;
 `
+  },
+  {
+    version: '005_playlists',
+    sql: `
+CREATE TABLE IF NOT EXISTS playlists (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  name       TEXT    NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS playlist_episodes (
+  playlist_id INTEGER NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
+  episode_id  INTEGER NOT NULL REFERENCES episodes(id) ON DELETE CASCADE,
+  position    INTEGER NOT NULL,
+  added_at    INTEGER NOT NULL,
+  PRIMARY KEY (playlist_id, episode_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_playlist_episodes_position
+  ON playlist_episodes(playlist_id, position);
+`
   }
 ]

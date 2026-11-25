@@ -19,11 +19,13 @@ import type {
   OperationResult,
   OpmlImportProgress,
   OpmlImportSummary,
+  PlaylistAddResult,
   Podcast,
   StorageSummary,
   Theme,
   UpdateProgress
 } from '@shared/types'
+import type { PlaylistAddInput } from '@shared/validation'
 
 const initialTheme = themeFromArgv(process.argv) ?? 'dark'
 // The preload project is typechecked without the DOM lib. The document exists
@@ -88,6 +90,16 @@ const api = {
     ipcRenderer.invoke(IPC.QUEUE_REORDER, { episodeIds }),
   autoAdvance: (episodeId: number): Promise<Episode | null> =>
     ipcRenderer.invoke(IPC.QUEUE_NEXT, { episodeId }),
+
+  // Playlists
+  addToPlaylist: (input: PlaylistAddInput): Promise<PlaylistAddResult> =>
+    ipcRenderer.invoke(IPC.PLAYLISTS_ADD, input),
+  showEpisodeMenu: (episodeIds: number[]): Promise<void> =>
+    ipcRenderer.invoke(IPC.EPISODES_CONTEXT_MENU, { episodeIds }),
+  onPlaylistAddExisting: (cb: (request: { playlistId: number; episodeIds: number[] }) => void) =>
+    subscribe(IPC.PLAYLISTS_ADD_EXISTING, cb),
+  onNewPlaylist: (cb: (request: { episodeIds: number[] }) => void) =>
+    subscribe(IPC.PLAYLISTS_PROMPT_NEW, cb),
 
   // Updates
   checkForUpdates: (podcastId?: number): Promise<void> =>

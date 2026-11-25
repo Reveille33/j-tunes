@@ -6,6 +6,7 @@ import { SettingsRepo, DEFAULT_SETTINGS } from './db/repositories/settingsRepo'
 import { ImportJobRepo } from './db/repositories/importJobRepo'
 import { ChapterRepo } from './db/repositories/chapterRepo'
 import { QueueRepo } from './db/repositories/queueRepo'
+import { PlaylistRepo } from './db/repositories/playlistRepo'
 import { StatsRepo } from './db/repositories/statsRepo'
 import { UpdateService } from './services/updateService'
 import { DownloadManager } from './services/downloadManager'
@@ -29,6 +30,7 @@ export class AppContext {
   readonly importJobs: ImportJobRepo
   readonly chapters: ChapterRepo
   readonly queue: QueueRepo
+  readonly playlists: PlaylistRepo
   readonly stats: StatsRepo
   readonly playback: PlaybackService
   readonly opmlImporter: OpmlImportService
@@ -45,6 +47,7 @@ export class AppContext {
     this.importJobs = new ImportJobRepo(this.db)
     this.chapters = new ChapterRepo(this.db)
     this.queue = new QueueRepo(this.db)
+    this.playlists = new PlaylistRepo(this.db)
     this.stats = new StatsRepo(this.db)
     this.playback = new PlaybackService({
       queue: this.queue,
