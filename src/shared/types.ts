@@ -281,6 +281,8 @@ export interface AppSettings {
   downloadDir: string
   autoDownloadDefault: boolean
   globalDescriptionsVisible: boolean
+  /** Render episode and podcast descriptions without the line clamp. */
+  showFullDescriptions: boolean
   lastPlaybackSpeed: number
   defaultVolume: number
   checkUpdatesOnStartup: boolean

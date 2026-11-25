@@ -958,6 +958,15 @@
   overflow-y: auto;
 }
 
+.episode-row-description.is-full {
+  cursor: default;
+}
+
+.episode-row-description-full.is-full {
+  max-height: none;
+  overflow: visible;
+}
+
 .episode-row-actions {
   display: flex;
   align-items: center;
@@ -1043,6 +1052,11 @@
   line-height: 1.5;
   max-height: 3.2em;
   overflow: hidden;
+}
+
+.podcast-detail-description.is-full {
+  max-height: none;
+  overflow: visible;
 }
 
 .podcast-detail-actions {

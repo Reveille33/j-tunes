@@ -14,6 +14,8 @@ interface UiState {
   descriptionTerm: string
   /** Whether descriptions are shown in the list at all. */
   descriptionsVisible: boolean
+  /** Whether shown descriptions skip the line clamp and height cap. */
+  descriptionsFull: boolean
   /** Ids of episodes whose description is expanded. */
   expandedEpisodes: Set<number>
   sidebarWidth: number
@@ -38,6 +40,7 @@ interface UiState {
   setYear: (year: number | null) => void
   setDescriptionTerm: (term: string) => void
   setDescriptionsVisible: (visible: boolean) => void
+  setDescriptionsFull: (full: boolean) => void
   toggleEpisodeExpanded: (episodeId: number) => void
   setSidebarWidth: (width: number) => void
   selectPodcast: (podcastId: number | null) => void
@@ -70,6 +73,7 @@ export const useUiStore = create<UiState>((set) => ({
   year: null,
   descriptionTerm: '',
   descriptionsVisible: false,
+  descriptionsFull: false,
   expandedEpisodes: new Set<number>(),
   sidebarWidth: 260,
   selectedPodcastId: null,
@@ -93,6 +97,7 @@ export const useUiStore = create<UiState>((set) => ({
   setYear: (year) => set({ year }),
   setDescriptionTerm: (descriptionTerm) => set({ descriptionTerm }),
   setDescriptionsVisible: (descriptionsVisible) => set({ descriptionsVisible }),
+  setDescriptionsFull: (descriptionsFull) => set({ descriptionsFull }),
   toggleEpisodeExpanded: (episodeId) =>
     set((state) => {
       const next = new Set(state.expandedEpisodes)

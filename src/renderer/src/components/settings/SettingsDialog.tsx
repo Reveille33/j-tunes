@@ -22,6 +22,7 @@ export function SettingsDialog({ onClose }: SettingsDialogProps): React.JSX.Elem
   const showToast = useUiStore((s) => s.showToast)
   const setTheme = useUiStore((s) => s.setTheme)
   const setDescriptionsVisible = useUiStore((s) => s.setDescriptionsVisible)
+  const setDescriptionsFull = useUiStore((s) => s.setDescriptionsFull)
   const setRate = usePlayerStore((s) => s.setRate)
   const setVolume = usePlayerStore((s) => s.setVolume)
   const setOpmlImportOpen = useUiStore((s) => s.setOpmlImportOpen)
@@ -58,6 +59,7 @@ export function SettingsDialog({ onClose }: SettingsDialogProps): React.JSX.Elem
       // Mirror the preferences that have a visible effect right away.
       if (key === 'theme') setTheme(value as Theme)
       else if (key === 'globalDescriptionsVisible') setDescriptionsVisible(value as boolean)
+      else if (key === 'showFullDescriptions') setDescriptionsFull(value as boolean)
       else if (key === 'lastPlaybackSpeed') setRate(value as number)
       else if (key === 'defaultVolume') setVolume(value as number)
     } catch (err) {
@@ -212,6 +214,21 @@ export function SettingsDialog({ onClose }: SettingsDialogProps): React.JSX.Elem
                 />
                 Show descriptions in the episode list
               </label>
+            </div>
+
+            <div className="dialog-section">
+              <label className="dialog-checkbox">
+                <input
+                  type="checkbox"
+                  checked={settings.showFullDescriptions}
+                  onChange={(event) => void apply('showFullDescriptions', event.target.checked)}
+                />
+                Show full descriptions
+              </label>
+              <p className="dialog-hint">
+                Episode rows and the podcast header show the whole description instead of a
+                shortened one.
+              </p>
             </div>
 
             <div className="dialog-divider">

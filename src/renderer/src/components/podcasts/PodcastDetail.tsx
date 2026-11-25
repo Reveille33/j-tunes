@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { usePodcastStore } from '../../state/podcastStore'
 import { useUiStore } from '../../state/uiStore'
 import { formatDate } from '../../utils/format'
+import { podcastDescriptionClamped } from '@shared/descriptionDisplay'
 import type { Podcast } from '@shared/types'
 
 interface PodcastDetailProps {
@@ -25,6 +26,7 @@ export function PodcastDetail({
 }: PodcastDetailProps): React.JSX.Element {
   const updatePodcast = usePodcastStore((s) => s.updatePodcast)
   const showToast = useUiStore((s) => s.showToast)
+  const descriptionsFull = useUiStore((s) => s.descriptionsFull)
   const [busy, setBusy] = useState(false)
   const [queueingAll, setQueueingAll] = useState(false)
 
@@ -99,7 +101,13 @@ export function PodcastDetail({
         </div>
 
         {podcast.description ? (
-          <p className="podcast-detail-description">{podcast.description}</p>
+          <p
+            className={`podcast-detail-description${
+              podcastDescriptionClamped(descriptionsFull) ? '' : ' is-full'
+            }`}
+          >
+            {podcast.description}
+          </p>
         ) : null}
 
         <div className="podcast-detail-actions">

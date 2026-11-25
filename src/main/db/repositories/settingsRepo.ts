@@ -6,6 +6,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   downloadDir: '',
   autoDownloadDefault: true,
   globalDescriptionsVisible: false,
+  showFullDescriptions: false,
   lastPlaybackSpeed: 1,
   defaultVolume: 1,
   checkUpdatesOnStartup: true,
@@ -42,6 +43,7 @@ export class SettingsRepo {
     const theme = map.get('theme')
     const dir = map.get('downloadDir')
     const descriptions = map.get('globalDescriptionsVisible')
+    const fullDescriptions = map.get('showFullDescriptions')
     const speed = map.get('lastPlaybackSpeed')
     const volume = map.get('defaultVolume')
     const checkOnStart = map.get('checkUpdatesOnStartup')
@@ -57,6 +59,10 @@ export class SettingsRepo {
         descriptions === undefined
           ? defaults.globalDescriptionsVisible
           : descriptions === 'true',
+      showFullDescriptions:
+        fullDescriptions === undefined
+          ? defaults.showFullDescriptions
+          : fullDescriptions === 'true',
       lastPlaybackSpeed: speed ? Number(speed) : defaults.lastPlaybackSpeed,
       defaultVolume: volume ? Number(volume) : defaults.defaultVolume,
       checkUpdatesOnStartup:
