@@ -42,6 +42,7 @@ export const IPC = {
   PODCAST_FOLDERS_LIST: 'podcast:folders:list',
   PODCAST_FOLDERS_ADD: 'podcast:folders:add',
   PODCAST_FOLDERS_REMOVE: 'podcast:folders:remove',
+  PODCAST_ADD_LOCAL: 'podcast:addLocal',
 
   // Episodes
   EPISODES_QUERY: 'episodes:query',
@@ -132,6 +133,8 @@ export interface JTunesApi {
   listPodcastFolders(podcastId: number): Promise<PodcastFolder[]>
   addPodcastFolder(podcastId: number, path: string): Promise<PodcastFolder>
   removePodcastFolder(folderId: number): Promise<void>
+  /** Creates a show with no feed, links one folder, and scans it. */
+  addLocalPodcast(title: string, path: string): Promise<Podcast>
 
   // Episodes
   queryEpisodes(query: EpisodeQuery): Promise<EpisodePage>

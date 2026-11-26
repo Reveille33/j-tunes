@@ -10,8 +10,8 @@ interface AddPodcastDialogProps {
 }
 
 /**
- * Subscribe to a podcast, either by pasting a feed URL or by searching the
- * built-in directory.
+ * Subscribe to a podcast by feed URL or directory search, or add a local
+ * show from a folder on disk.
  */
 export function AddPodcastDialog({ onClose, onSubscribed }: AddPodcastDialogProps): React.JSX.Element {
   const setPodcasts = usePodcastStore((s) => s.setPodcasts)
@@ -23,9 +23,13 @@ export function AddPodcastDialog({ onClose, onSubscribed }: AddPodcastDialogProp
   const [results, setResults] = useState<FeedSearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const [subscribing, setSubscribing] = useState(false)
+  const [localName, setLocalName] = useState('')
+  const [localFolder, setLocalFolder] = useState<string | null>(null)
+  const [addingLocal, setAddingLocal] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const busy = subscribing || addingLocal
 
-  useEscapeKey(onClose, !subscribing)
+  useEscapeKey(onClose, !busy)
 
   // Debounced directory search.
   useEffect(() => {
@@ -71,6 +75,33 @@ export function AddPodcastDialog({ onClose, onSubscribed }: AddPodcastDialogProp
     }
   }
 
+  const chooseLocalFolder = async () => {
+    setError(null)
+    try {
+      const picked = await window.api.pickFolder()
+      if (picked[0]) setLocalFolder(picked[0])
+    } catch (err) {
+      setError((err as Error).message)
+    }
+  }
+
+  const addLocal = async () => {
+    if (!localName.trim() || !localFolder) return
+    setAddingLocal(true)
+    setError(null)
+    try {
+      const podcast = await window.api.addLocalPodcast(localName.trim(), localFolder)
+      setPodcasts([...podcasts, podcast])
+      showToast(`Added "${podcast.title}"`, 'success')
+      onSubscribed?.()
+      onClose()
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setAddingLocal(false)
+    }
+  }
+
   return (
     <div className="dialog-backdrop" onClick={onClose}>
       <div className="dialog" onClick={(event) => event.stopPropagation()}>
@@ -100,7 +131,7 @@ export function AddPodcastDialog({ onClose, onSubscribed }: AddPodcastDialogProp
               />
               <button
                 className="button button-primary"
-                disabled={!feedUrl.trim() || subscribing}
+                disabled={!feedUrl.trim() || busy}
                 onClick={() => void subscribe(feedUrl.trim())}
               >
                 {subscribing ? 'Subscribing…' : 'Subscribe'}
@@ -131,7 +162,7 @@ export function AddPodcastDialog({ onClose, onSubscribed }: AddPodcastDialogProp
                     <button
                       className="feed-result"
                       onClick={() => void subscribe(result.feedUrl)}
-                      disabled={subscribing}
+                      disabled={busy}
                     >
                       {result.artworkUrl ? (
                         <img className="feed-result-art" src={result.artworkUrl} alt="" />
@@ -154,6 +185,46 @@ export function AddPodcastDialog({ onClose, onSubscribed }: AddPodcastDialogProp
             {!searching && searchTerm.trim() && results.length === 0 ? (
               <p className="dialog-hint">No podcasts found for “{searchTerm.trim()}”.</p>
             ) : null}
+          </div>
+
+          <div className="dialog-divider">
+            <span>or a folder</span>
+          </div>
+
+          <div className="dialog-section local-podcast-fields">
+            <label className="dialog-label" htmlFor="local-podcast-name">
+              Add local podcast
+            </label>
+            <div className="dialog-row">
+              <input
+                id="local-podcast-name"
+                className="dialog-input"
+                type="text"
+                placeholder="Show name"
+                value={localName}
+                onChange={(event) => setLocalName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && localName.trim() && localFolder) void addLocal()
+                }}
+              />
+            </div>
+            <div className="dialog-row">
+              <button className="button" onClick={() => void chooseLocalFolder()} disabled={busy}>
+                {localFolder ? 'Change folder' : 'Choose folder'}
+              </button>
+              <span className="local-podcast-path truncate" title={localFolder ?? undefined}>
+                {localFolder ?? 'No folder chosen'}
+              </span>
+            </div>
+            <div>
+              <button
+                className="button button-primary"
+                disabled={!localName.trim() || !localFolder || busy}
+                onClick={() => void addLocal()}
+              >
+                {addingLocal ? 'Adding…' : 'Add local podcast…'}
+              </button>
+            </div>
           </div>
 
           {error ? <div className="dialog-error">{error}</div> : null}

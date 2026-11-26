@@ -71,6 +71,8 @@ const api = {
     ipcRenderer.invoke(IPC.PODCAST_FOLDERS_ADD, { podcastId, path }),
   removePodcastFolder: (folderId: number): Promise<void> =>
     ipcRenderer.invoke(IPC.PODCAST_FOLDERS_REMOVE, { folderId }),
+  addLocalPodcast: (title: string, path: string): Promise<Podcast> =>
+    ipcRenderer.invoke(IPC.PODCAST_ADD_LOCAL, { title, path }),
 
   // Episodes
   queryEpisodes: (query: EpisodeQuery): Promise<EpisodePage> =>

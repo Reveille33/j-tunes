@@ -58,6 +58,11 @@ export const podcastFolderRemoveSchema = z.object({
   folderId: idSchema
 })
 
+export const addLocalPodcastSchema = z.object({
+  title: z.string().trim().min(1).max(500),
+  path: z.string().trim().min(1).max(4096)
+})
+
 export const unsubscribeSchema = z.object({
   podcastId: idSchema,
   fileAction: fileActionSchema

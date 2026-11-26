@@ -9,7 +9,8 @@ import {
   searchFeedSchema,
   podcastFoldersListSchema,
   podcastFolderAddSchema,
-  podcastFolderRemoveSchema
+  podcastFolderRemoveSchema,
+  addLocalPodcastSchema
 } from '@shared/validation'
 import { sanitiseFileName } from '../util/fsHelpers'
 import { unsubscribeTrashPlan } from '../services/sourceFolders'
@@ -17,6 +18,7 @@ import { canonicaliseFeedUrl, fetchFeed } from '../services/feedService'
 import { queueNewestSubscribedEpisode } from '../services/initialDownload'
 import { subscribeToFeed } from '../services/subscriptionService'
 import { searchFeeds } from '../services/feedSearchService'
+import { addLocalPodcast } from '../services/localPodcast'
 import type { AppContext } from '../appContext'
 import type { OperationResult } from '@shared/types'
 
@@ -139,6 +141,14 @@ export function registerPodcastHandlers(ctx: AppContext): void {
   ipcMain.handle(IPC.PODCAST_FOLDERS_REMOVE, (_event, raw: unknown) => {
     const { folderId } = podcastFolderRemoveSchema.parse(raw)
     ctx.folders.remove(folderId)
+  })
+
+  ipcMain.handle(IPC.PODCAST_ADD_LOCAL, async (_event, raw: unknown) => {
+    const input = addLocalPodcastSchema.parse(raw)
+    return addLocalPodcast(
+      { podcasts: ctx.podcasts, folders: ctx.folders, episodes: ctx.episodes },
+      input
+    )
   })
 
   ipcMain.handle(IPC.LIBRARY_PICK_FOLDER, async () => {
