@@ -63,3 +63,9 @@ export const PROGRESS_THROTTLE_MS = 250
 /** The built-in podcast directory search provider. */
 export const FEED_SEARCH_ENDPOINT = 'https://itunes.apple.com/search'
 export const FEED_LOOKUP_ENDPOINT = 'https://itunes.apple.com/lookup'
+
+/**
+ * Largest iTunes Library.xml the picker should open.
+ * The parser refuses text above this size as well.
+ */
+export const ITUNES_LIBRARY_MAX_BYTES = 200 * 1024 * 1024
