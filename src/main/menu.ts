@@ -1,13 +1,14 @@
 import { app, Menu } from 'electron'
-import type { BrowserWindow, MenuItemConstructorOptions } from 'electron'
+import type { BrowserWindow } from 'electron'
 import { IPC } from '@shared/ipc'
+import { aboutPanelOptions, applicationMenuTemplate } from './applicationMenu'
 
 /**
- * Builds the application menu.
+ * Builds the application menu and points the native about panel at j-Tunes
+ * plus `app.getVersion()`.
  *
- * The only non-standard entry is Settings, which asks the focused window's
- * renderer to open the Settings dialog via `app:open-settings`. It lives in the
- * app menu on macOS (per platform convention) and in a File menu elsewhere.
+ * The macOS app-menu About item calls the panel itself, so the options are
+ * set here, not only from the Help item used on other platforms.
  */
 export function buildApplicationMenu(
   getWindow: () => BrowserWindow | null
@@ -16,82 +17,19 @@ export function buildApplicationMenu(
     getWindow()?.webContents.send(IPC.APP_OPEN_SETTINGS)
   }
 
-  const isMac = process.platform === 'darwin'
+  const showAbout = (): void => {
+    app.setAboutPanelOptions(aboutPanelOptions(app.getVersion()))
+    app.showAboutPanel()
+  }
 
-  const template: MenuItemConstructorOptions[] = [
-    ...(isMac
-      ? ([
-          {
-            label: app.name,
-            submenu: [
-              { role: 'about' },
-              { type: 'separator' },
-              {
-                label: 'Settings…',
-                accelerator: 'CmdOrCtrl+,',
-                click: openSettings
-              },
-              { type: 'separator' },
-              { role: 'services' },
-              { type: 'separator' },
-              { role: 'hide' },
-              { role: 'hideOthers' },
-              { role: 'unhide' },
-              { type: 'separator' },
-              { role: 'quit' }
-            ]
-          }
-        ] satisfies MenuItemConstructorOptions[])
-      : []),
-    {
-      label: 'File',
-      submenu: [
-        {
-          label: 'Settings…',
-          accelerator: 'CmdOrCtrl+,',
-          click: openSettings
-        },
-        { type: 'separator' },
-        isMac ? { role: 'close' } : { role: 'quit' }
-      ]
-    },
-    {
-      label: 'Edit',
-      submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
-        { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'selectAll' }
-      ]
-    },
-    {
-      label: 'View',
-      submenu: [
-        { role: 'reload' },
-        { role: 'forceReload' },
-        { role: 'toggleDevTools' },
-        { type: 'separator' },
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
-        { type: 'separator' },
-        { role: 'togglefullscreen' }
-      ]
-    },
-    {
-      label: 'Window',
-      submenu: [
-        { role: 'minimize' },
-        { role: 'zoom' },
-        ...(isMac
-          ? ([{ type: 'separator' }, { role: 'front' }] satisfies MenuItemConstructorOptions[])
-          : ([{ role: 'close' }] satisfies MenuItemConstructorOptions[]))
-      ]
-    }
-  ]
+  app.setAboutPanelOptions(aboutPanelOptions(app.getVersion()))
 
-  return Menu.buildFromTemplate(template)
+  return Menu.buildFromTemplate(
+    applicationMenuTemplate({
+      platform: process.platform,
+      appName: app.name,
+      openSettings,
+      showAbout
+    })
+  )
 }
