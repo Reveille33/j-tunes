@@ -103,6 +103,30 @@ describe('iTunes library file import', () => {
     expect(podcastCount()).toBe(0)
   })
 
+  it('counts a Windows path that is not on this disk as missing', async () => {
+    const file = join(dir, 'windows.xml')
+    writeFileSync(
+      file,
+      `<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict><key>Tracks</key><dict>
+  <key>1</key><dict>
+    <key>Name</key><string>Pilot</string>
+    <key>Album</key><string>Alpha</string>
+    <key>Persistent ID</key><string>WIN1</string>
+    <key>Podcast</key><true/>
+    <key>Location</key><string>file:///C:/__jtunes_missing__/Pilot.mp3</string>
+  </dict>
+</dict></dict></plist>`
+    )
+    const preview = await previewItunesLibraryFile(deps, file)
+    expect(preview).toMatchObject({
+      episodesCreated: 1,
+      missingFiles: 1,
+      showsCreated: 1
+    })
+    expect(podcastCount()).toBe(0)
+  })
+
   it('reports a file with no podcasts and writes nothing', async () => {
     const file = join(dir, 'notes.xml')
     writeFileSync(file, '<plist version="1.0"><dict></dict></plist>')

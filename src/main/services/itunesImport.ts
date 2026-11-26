@@ -257,6 +257,11 @@ async function resolveShow(
   return { show, episodes, files }
 }
 
+/**
+ * Stat and realpath use this machine's filesystem. A decoded Mac path is kept
+ * when the file is here, including on Windows when that path exists, and a
+ * path from the other OS that is not on disk stays missing.
+ */
 async function resolveFile(filePath: string | null): Promise<string | null> {
   if (!filePath) return null
   try {

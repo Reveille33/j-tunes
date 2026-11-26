@@ -12,6 +12,20 @@ import {
 const fixturePath = join(dirname(fileURLToPath(import.meta.url)), 'fixtures/itunes-library.xml')
 const fixture = readFileSync(fixturePath, 'utf8')
 
+function trackPath(location: string): string | null {
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict><key>Tracks</key><dict>
+  <key>1</key><dict>
+    <key>Name</key><string>Pilot</string>
+    <key>Album</key><string>Alpha</string>
+    <key>Persistent ID</key><string>WIN1</string>
+    <key>Podcast</key><true/>
+    <key>Location</key><string>${location}</string>
+  </dict>
+</dict></dict></plist>`
+  return parseItunesLibrary(xml).shows[0]?.episodes[0]?.filePath ?? null
+}
+
 function episode(shows: { episodes: ItunesEpisode[] }[], guid: string): ItunesEpisode {
   const found = shows.flatMap((show) => show.episodes).find((item) => item.guid === guid)
   if (!found) throw new Error(`missing ${guid}`)
@@ -85,6 +99,14 @@ describe('iTunes library parser', () => {
     expect(remote.filePath).toBeNull()
     expect(cafe.filePath).toBe('/Users/jeff/Music/Podcasts/Alpha/Caf\u00e9.mp3')
     expect(cafe.filePath?.includes('\u0301')).toBe(false)
+  })
+
+  it('decodes a Windows file URL from its drive letter on every platform', () => {
+    expect(trackPath('file:///C:/Users/jeff/Music/iTunes%20Media/Pilot.mp3')).toBe(
+      'C:\\Users\\jeff\\Music\\iTunes Media\\Pilot.mp3'
+    )
+    expect(trackPath('file://localhost/D:/Shows/Pilot.mp3')).toBe('D:\\Shows\\Pilot.mp3')
+    expect(trackPath('file://otherhost/Users/jeff/x.mp3')).toBeNull()
   })
 
   it('applies unplayed, bookmark, and play count rules', () => {
