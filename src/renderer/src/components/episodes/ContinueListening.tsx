@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useEpisodeStore } from '../../state/episodeStore'
 import { usePlayerStore } from '../../state/playerStore'
 import { formatDuration } from '../../utils/format'
+import { openEpisodePlaylistMenu } from '../../playlistActions'
+import { useUiStore } from '../../state/uiStore'
 import type { Episode } from '@shared/types'
 
 interface ContinueListeningProps {
@@ -50,6 +52,10 @@ export function ContinueListening({ onPlay }: ContinueListeningProps): React.JSX
               key={episode.id}
               className="continue-card"
               onClick={() => onPlay(episode)}
+              onContextMenu={(event) => {
+                event.preventDefault()
+                openEpisodePlaylistMenu(episode.id, useUiStore.getState().selectedEpisodeIds)
+              }}
               title={episode.title}
             >
               {art ? (

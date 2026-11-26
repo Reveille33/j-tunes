@@ -20,6 +20,7 @@ interface UiState {
   expandedEpisodes: Set<number>
   sidebarWidth: number
   selectedPodcastId: number | null
+  selectedPlaylistId: number | null
   isAddPodcastOpen: boolean
   isImportOpen: boolean
   isSettingsOpen: boolean
@@ -44,6 +45,7 @@ interface UiState {
   toggleEpisodeExpanded: (episodeId: number) => void
   setSidebarWidth: (width: number) => void
   selectPodcast: (podcastId: number | null) => void
+  selectPlaylist: (playlistId: number | null) => void
   setAddPodcastOpen: (open: boolean) => void
   setImportOpen: (open: boolean) => void
   setSettingsOpen: (open: boolean) => void
@@ -77,6 +79,7 @@ export const useUiStore = create<UiState>((set) => ({
   expandedEpisodes: new Set<number>(),
   sidebarWidth: 260,
   selectedPodcastId: null,
+  selectedPlaylistId: null,
   isAddPodcastOpen: false,
   isImportOpen: false,
   isSettingsOpen: false,
@@ -106,7 +109,8 @@ export const useUiStore = create<UiState>((set) => ({
       return { expandedEpisodes: next }
     }),
   setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
-  selectPodcast: (selectedPodcastId) => set({ selectedPodcastId }),
+  selectPodcast: (selectedPodcastId) => set({ selectedPodcastId, selectedPlaylistId: null }),
+  selectPlaylist: (selectedPlaylistId) => set({ selectedPlaylistId, selectedPodcastId: null }),
   setAddPodcastOpen: (isAddPodcastOpen) => set({ isAddPodcastOpen }),
   setImportOpen: (isImportOpen) => set({ isImportOpen }),
   setSettingsOpen: (isSettingsOpen) => set({ isSettingsOpen }),

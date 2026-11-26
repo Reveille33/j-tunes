@@ -16,12 +16,16 @@ import { ContinueListening } from './components/episodes/ContinueListening'
 import { OpmlImportDialog } from './components/podcasts/OpmlImportDialog'
 import { CommandPalette } from './components/CommandPalette'
 import { ShortcutsDialog } from './components/ShortcutsDialog'
+import { NewPlaylistDialog } from './components/playlists/NewPlaylistDialog'
+import { PlaylistView } from './components/playlists/PlaylistView'
+import { commitPlaylistAdd } from './playlistActions'
 import { useUiStore } from './state/uiStore'
 import { canPersistSetting } from '@shared/settingsPersist'
 import { usePodcastStore } from './state/podcastStore'
 import { useEpisodeStore } from './state/episodeStore'
 import { usePlayerStore } from './state/playerStore'
 import { useQueueStore } from './state/queueStore'
+import { usePlaylistStore } from './state/playlistStore'
 import { useEpisodes } from './hooks/useEpisodes'
 import { usePlayer } from './hooks/usePlayer'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
@@ -45,6 +49,7 @@ export function App(): React.JSX.Element {
   const setYears = usePodcastStore((s) => s.setYears)
 
   const [unsubscribeId, setUnsubscribeId] = useState<number | null>(null)
+  const [newPlaylistIds, setNewPlaylistIds] = useState<number[] | null>(null)
   const [checking, setChecking] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<string | null>(null)
   const [bulkBusy, setBulkBusy] = useState(false)
@@ -64,8 +69,10 @@ export function App(): React.JSX.Element {
   const clearSelection = useUiStore((s) => s.clearSelection)
   const setSelection = useUiStore((s) => s.setSelection)
   const selectedPodcastId = useUiStore((s) => s.selectedPodcastId)
+  const selectedPlaylistId = useUiStore((s) => s.selectedPlaylistId)
   const podcasts = usePodcastStore((s) => s.podcasts)
   const loadQueue = useQueueStore((s) => s.load)
+  const loadPlaylists = usePlaylistStore((s) => s.load)
   const addManyToQueue = useQueueStore((s) => s.addMany)
 
   const { refresh, loadMore } = useEpisodes()
@@ -175,6 +182,21 @@ export function App(): React.JSX.Element {
     return window.api.onSettingsOpen(() => setSettingsOpen(true))
   }, [setSettingsOpen])
 
+  // The episode context menu reports the playlist the user picked.
+  useEffect(() => {
+    return window.api.onPlaylistAddExisting((request) => {
+      void commitPlaylistAdd({
+        target: 'existing',
+        playlistId: request.playlistId,
+        episodeIds: request.episodeIds
+      })
+    })
+  }, [])
+
+  useEffect(() => {
+    return window.api.onNewPlaylist((request) => setNewPlaylistIds(request.episodeIds))
+  }, [])
+
   // Command palette (Ctrl/Cmd+K) and keyboard help (`?`).
   useEffect(() => {
     const handler = (event: KeyboardEvent): void => {
@@ -248,10 +270,11 @@ export function App(): React.JSX.Element {
     setUnsubscribeId(podcastId)
   }, [])
 
-  // Load the persisted Up Next queue on startup.
+  // Load the persisted Up Next queue and playlists on startup.
   useEffect(() => {
     void loadQueue()
-  }, [loadQueue])
+    void loadPlaylists()
+  }, [loadPlaylists, loadQueue])
 
   const handleBulkPlayed = useCallback(
     async (played: boolean) => {
@@ -292,7 +315,12 @@ export function App(): React.JSX.Element {
   }, [addManyToQueue, clearSelection, showToast])
 
   const handleSelectAll = useCallback(() => {
-    setSelection(useEpisodeStore.getState().episodes.map((e) => e.id))
+    const playlistId = useUiStore.getState().selectedPlaylistId
+    const ids =
+      playlistId !== null
+        ? usePlaylistStore.getState().episodes.map((episode) => episode.id)
+        : useEpisodeStore.getState().episodes.map((episode) => episode.id)
+    setSelection(ids)
   }, [setSelection])
 
   const selectedPodcast = podcasts.find((p) => p.id === selectedPodcastId) ?? null
@@ -321,39 +349,61 @@ export function App(): React.JSX.Element {
         />
 
         <main className="app-main">
-          {selectedPodcast ? (
-            <PodcastDetail
-              podcast={selectedPodcast}
-              onCheckUpdates={(podcastId) => {
-                setChecking(true)
-                setUpdateStatus('Starting…')
-                void window.api.checkForUpdates(podcastId)
-              }}
-              onUnsubscribe={handleUnsubscribe}
-              onChanged={() => {
-                void loadLibrary()
-                void refresh()
-              }}
+          {selectedPlaylistId !== null ? (
+            <PlaylistView
+              playlistId={selectedPlaylistId}
+              onPlay={handlePlay}
+              toolbar={
+                selectedEpisodeIds.size > 0 ? (
+                  <BulkActionsBar
+                    count={selectedEpisodeIds.size}
+                    busy={bulkBusy}
+                    onMarkPlayed={() => void handleBulkPlayed(true)}
+                    onMarkUnplayed={() => void handleBulkPlayed(false)}
+                    onAddToQueue={() => void handleBulkQueue()}
+                    onSelectAll={handleSelectAll}
+                    onClear={clearSelection}
+                  />
+                ) : null
+              }
             />
-          ) : null}
+          ) : (
+            <>
+              {selectedPodcast ? (
+                <PodcastDetail
+                  podcast={selectedPodcast}
+                  onCheckUpdates={(podcastId) => {
+                    setChecking(true)
+                    setUpdateStatus('Starting…')
+                    void window.api.checkForUpdates(podcastId)
+                  }}
+                  onUnsubscribe={handleUnsubscribe}
+                  onChanged={() => {
+                    void loadLibrary()
+                    void refresh()
+                  }}
+                />
+              ) : null}
 
-          {selectedPodcastId === null ? <ContinueListening onPlay={handlePlay} /> : null}
+              {selectedPodcastId === null ? <ContinueListening onPlay={handlePlay} /> : null}
 
-          <FilterPanel />
+              <FilterPanel />
 
-          {selectedEpisodeIds.size > 0 ? (
-            <BulkActionsBar
-              count={selectedEpisodeIds.size}
-              busy={bulkBusy}
-              onMarkPlayed={() => void handleBulkPlayed(true)}
-              onMarkUnplayed={() => void handleBulkPlayed(false)}
-              onAddToQueue={() => void handleBulkQueue()}
-              onSelectAll={handleSelectAll}
-              onClear={clearSelection}
-            />
-          ) : null}
+              {selectedEpisodeIds.size > 0 ? (
+                <BulkActionsBar
+                  count={selectedEpisodeIds.size}
+                  busy={bulkBusy}
+                  onMarkPlayed={() => void handleBulkPlayed(true)}
+                  onMarkUnplayed={() => void handleBulkPlayed(false)}
+                  onAddToQueue={() => void handleBulkQueue()}
+                  onSelectAll={handleSelectAll}
+                  onClear={clearSelection}
+                />
+              ) : null}
 
-          <EpisodeList onPlay={handlePlay} onLoadMore={loadMore} />
+              <EpisodeList onPlay={handlePlay} onLoadMore={loadMore} />
+            </>
+          )}
         </main>
       </div>
 
@@ -404,6 +454,9 @@ export function App(): React.JSX.Element {
       {isShortcutsOpen ? <ShortcutsDialog onClose={() => setShortcutsOpen(false)} /> : null}
       {unsubscribeId !== null ? (
         <UnsubscribeDialog podcastId={unsubscribeId} onClose={() => setUnsubscribeId(null)} />
+      ) : null}
+      {newPlaylistIds !== null ? (
+        <NewPlaylistDialog episodeIds={newPlaylistIds} onClose={() => setNewPlaylistIds(null)} />
       ) : null}
 
       {toast ? (

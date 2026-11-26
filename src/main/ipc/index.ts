@@ -6,6 +6,7 @@ import { registerDownloadHandlers } from './downloads.ipc'
 import { registerUpdateHandlers } from './updates.ipc'
 import { registerLibraryHandlers } from './library.ipc'
 import { registerQueueHandlers } from './queue.ipc'
+import { registerPlaylistHandlers } from './playlists.ipc'
 import { registerSettingsHandlers, registerWindowHandlers } from './settings.ipc'
 
 /** Registers every IPC handler exactly once. */
@@ -16,6 +17,7 @@ export function registerIpcHandlers(ctx: AppContext, getWindow: () => BrowserWin
   registerUpdateHandlers(ctx)
   registerLibraryHandlers(ctx)
   registerQueueHandlers(ctx)
+  registerPlaylistHandlers(ctx)
   registerSettingsHandlers(ctx)
   registerWindowHandlers(getWindow)
 }

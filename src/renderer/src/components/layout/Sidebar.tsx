@@ -1,6 +1,8 @@
 import { useUiStore } from '../../state/uiStore'
+import { openEpisodePlaylistMenu } from '../../playlistActions'
 import { usePodcastStore } from '../../state/podcastStore'
 import { useQueueStore } from '../../state/queueStore'
+import { usePlaylistStore } from '../../state/playlistStore'
 import type { Episode } from '@shared/types'
 
 interface SidebarProps {
@@ -21,7 +23,10 @@ export function Sidebar({
 }: SidebarProps): React.JSX.Element {
   const podcasts = usePodcastStore((s) => s.podcasts)
   const selectedPodcastId = useUiStore((s) => s.selectedPodcastId)
+  const selectedPlaylistId = useUiStore((s) => s.selectedPlaylistId)
   const selectPodcast = useUiStore((s) => s.selectPodcast)
+  const selectPlaylist = useUiStore((s) => s.selectPlaylist)
+  const playlists = usePlaylistStore((s) => s.playlists)
   const searchTerm = useUiStore((s) => s.searchTerm)
   const setStatsOpen = useUiStore((s) => s.setStatsOpen)
   const setStorageOpen = useUiStore((s) => s.setStorageOpen)
@@ -43,7 +48,9 @@ export function Sidebar({
     <aside className="sidebar">
       <div className="sidebar-section">
         <button
-          className={`sidebar-item${selectedPodcastId === null ? ' is-active' : ''}`}
+          className={`sidebar-item${
+            selectedPodcastId === null && selectedPlaylistId === null ? ' is-active' : ''
+          }`}
           onClick={() => selectPodcast(null)}
         >
           <span className="sidebar-item-label">All Episodes</span>
@@ -96,6 +103,30 @@ export function Sidebar({
         )}
       </div>
 
+      <div className="sidebar-section">
+        <div className="sidebar-section-header">
+          <span>Playlists</span>
+        </div>
+        {playlists.length === 0 ? (
+          <p className="sidebar-empty">No playlists yet.</p>
+        ) : (
+          <ul className="sidebar-list">
+            {playlists.map((playlist) => (
+              <li key={playlist.id}>
+                <button
+                  className={`sidebar-item${selectedPlaylistId === playlist.id ? ' is-active' : ''}`}
+                  onClick={() => selectPlaylist(playlist.id)}
+                  title={playlist.name}
+                >
+                  <span className="sidebar-item-label truncate">{playlist.name}</span>
+                  <span className="sidebar-item-count">{playlist.episodeCount}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       {queueItems.length > 0 ? (
         <div className="sidebar-section">
           <div className="sidebar-section-header">
@@ -113,7 +144,13 @@ export function Sidebar({
           <ul className="sidebar-list">
             {queueItems.map((item, index) => (
               <li key={item.id}>
-                <div className="sidebar-item sidebar-podcast">
+                <div
+                  className="sidebar-item sidebar-podcast"
+                  onContextMenu={(event) => {
+                    event.preventDefault()
+                    openEpisodePlaylistMenu(item.id, useUiStore.getState().selectedEpisodeIds)
+                  }}
+                >
                   <button
                     className="sidebar-item-main"
                     onClick={() => onPlay(item)}
