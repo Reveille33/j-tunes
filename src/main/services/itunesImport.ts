@@ -1,5 +1,6 @@
 import { realpath, stat } from 'node:fs/promises'
 import { dirname, isAbsolute, relative, sep } from 'node:path'
+import type { ItunesImportSummary } from '@shared/types'
 import type { Db } from '../db/connection'
 import type { EpisodeRepo } from '../db/repositories/episodeRepo'
 import type { PodcastFolderRepo } from '../db/repositories/podcastFolderRepo'
@@ -16,18 +17,7 @@ export interface ItunesImportDeps {
   folders: PodcastFolderRepo
 }
 
-export interface ItunesImportSummary {
-  showsCreated: number
-  showsMatched: number
-  episodesCreated: number
-  episodesMatched: number
-  /** Newly created episodes written as played. */
-  played: number
-  /** Incoming episodes with no file on disk, including http locations. */
-  missingFiles: number
-  /** Shows that carried an http(s) feed URL. The URL is not written. */
-  feedUrlsSeen: number
-}
+export type { ItunesImportSummary }
 
 interface KnownShow {
   id: number

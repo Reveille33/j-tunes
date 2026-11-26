@@ -1,11 +1,12 @@
 import { ipcMain, dialog } from 'electron'
 import { readFile, writeFile } from 'node:fs/promises'
 import { IPC } from '@shared/ipc'
-import { importSchema, savePositionSchema } from '@shared/validation'
+import { importSchema, itunesLibraryPathSchema, savePositionSchema } from '@shared/validation'
 import { listeningIncrement } from '../services/listeningStats'
+import { importItunesLibraryFile, previewItunesLibraryFile } from '../services/itunesLibraryFile'
 import { buildOpml, exportableCount, parseOpml } from '../services/opml'
 import type { AppContext } from '../appContext'
-import type { OperationResult, OpmlImportSummary } from '@shared/types'
+import type { ItunesLibraryPreview, OperationResult, OpmlImportSummary } from '@shared/types'
 
 export function registerLibraryHandlers(ctx: AppContext): void {
   /**
@@ -96,6 +97,29 @@ export function registerLibraryHandlers(ctx: AppContext): void {
     ctx.opmlImporter.cancel()
   })
 
+  /**
+   * Opens a picker for one Library.xml, checks its size, then previews the
+   * import. Cancelled pickers return null. Nothing is written.
+   */
+  ipcMain.handle(IPC.LIBRARY_ITUNES_PREVIEW, async (): Promise<ItunesLibraryPreview | null> => {
+    const picked = await dialog.showOpenDialog({
+      title: 'Import iTunes Library',
+      properties: ['openFile'],
+      filters: [{ name: 'iTunes Library', extensions: ['xml'] }]
+    })
+    if (picked.canceled || picked.filePaths.length === 0) return null
+    const filePath = picked.filePaths[0]
+    if (!filePath) return null
+    const summary = await previewItunesLibraryFile(itunesDeps(ctx), filePath)
+    return { filePath, summary }
+  })
+
+  /** Imports the Library.xml the preview step already checked. */
+  ipcMain.handle(IPC.LIBRARY_ITUNES_IMPORT, async (_event, raw: unknown) => {
+    const { filePath } = itunesLibraryPathSchema.parse(raw)
+    return importItunesLibraryFile(itunesDeps(ctx), filePath)
+  })
+
   ipcMain.handle(IPC.PLAYER_SAVE_POSITION, (_event, raw: unknown) => {
     const { episodeId, position, duration } = savePositionSchema.parse(raw)
 
@@ -107,4 +131,13 @@ export function registerLibraryHandlers(ctx: AppContext): void {
     ctx.episodes.setPlayPosition(episodeId, position, duration)
     if (increment > 0) ctx.stats.addListeningSeconds(increment)
   })
+}
+
+function itunesDeps(ctx: AppContext) {
+  return {
+    db: ctx.db,
+    podcasts: ctx.podcasts,
+    episodes: ctx.episodes,
+    folders: ctx.folders
+  }
 }

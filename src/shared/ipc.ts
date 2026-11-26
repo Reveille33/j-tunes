@@ -15,6 +15,8 @@ import type {
   FileAction,
   ImportProgress,
   ImportSummary,
+  ItunesImportSummary,
+  ItunesLibraryPreview,
   LibraryStats,
   MediaSource,
   OperationResult,
@@ -101,6 +103,8 @@ export const IPC = {
   LIBRARY_IMPORT_OPML: 'library:importOpml',
   LIBRARY_CANCEL_OPML: 'library:cancelOpmlImport',
   LIBRARY_OPML_PROGRESS: 'library:opmlProgress',
+  LIBRARY_ITUNES_PREVIEW: 'library:itunesPreview',
+  LIBRARY_ITUNES_IMPORT: 'library:itunesImport',
 
   // Player
   PLAYER_SAVE_POSITION: 'player:savePosition',
@@ -203,6 +207,13 @@ export interface JTunesApi {
   /** Imports subscriptions from a user-chosen OPML file; null when cancelled. */
   importOpml(): Promise<OpmlImportSummary | null>
   cancelOpmlImport(): Promise<void>
+  /**
+   * Opens a native picker for one iTunes Library.xml, then previews the import.
+   * Null when the picker is cancelled. Writes nothing.
+   */
+  previewItunesLibrary(): Promise<ItunesLibraryPreview | null>
+  /** Imports a library that was just previewed. */
+  importItunesLibrary(filePath: string): Promise<ItunesImportSummary>
 
   // Player
   savePlaybackPosition(episodeId: number, position: number, duration: number): Promise<void>

@@ -271,6 +271,26 @@ export interface OpmlImportSummary {
   failed: number
 }
 
+/** Result of previewing or importing an iTunes library. Preview writes nothing. */
+export interface ItunesImportSummary {
+  showsCreated: number
+  showsMatched: number
+  episodesCreated: number
+  episodesMatched: number
+  /** Newly created episodes written as played. */
+  played: number
+  /** Incoming episodes with no file on disk, including http locations. */
+  missingFiles: number
+  /** Shows that carried an http(s) feed URL. The URL is not written. */
+  feedUrlsSeen: number
+}
+
+/** A chosen Library.xml and the preview of importing it. */
+export interface ItunesLibraryPreview {
+  filePath: string
+  summary: ItunesImportSummary
+}
+
 /** A playable media source handed to the renderer. */
 export interface MediaSource {
   url: string

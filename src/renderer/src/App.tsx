@@ -14,6 +14,7 @@ import { StatsDialog } from './components/stats/StatsDialog'
 import { StorageDialog } from './components/storage/StorageDialog'
 import { ContinueListening } from './components/episodes/ContinueListening'
 import { OpmlImportDialog } from './components/podcasts/OpmlImportDialog'
+import { ItunesImportDialog } from './components/podcasts/ItunesImportDialog'
 import { CommandPalette } from './components/CommandPalette'
 import { ShortcutsDialog } from './components/ShortcutsDialog'
 import { NewPlaylistDialog } from './components/playlists/NewPlaylistDialog'
@@ -61,6 +62,8 @@ export function App(): React.JSX.Element {
   const setStorageOpen = useUiStore((s) => s.setStorageOpen)
   const isOpmlImportOpen = useUiStore((s) => s.isOpmlImportOpen)
   const setOpmlImportOpen = useUiStore((s) => s.setOpmlImportOpen)
+  const isItunesImportOpen = useUiStore((s) => s.isItunesImportOpen)
+  const setItunesImportOpen = useUiStore((s) => s.setItunesImportOpen)
   const isPaletteOpen = useUiStore((s) => s.isPaletteOpen)
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen)
   const isShortcutsOpen = useUiStore((s) => s.isShortcutsOpen)
@@ -442,6 +445,15 @@ export function App(): React.JSX.Element {
       {isOpmlImportOpen ? (
         <OpmlImportDialog
           onClose={() => setOpmlImportOpen(false)}
+          onImported={() => {
+            void loadLibrary()
+            void refresh()
+          }}
+        />
+      ) : null}
+      {isItunesImportOpen ? (
+        <ItunesImportDialog
+          onClose={() => setItunesImportOpen(false)}
           onImported={() => {
             void loadLibrary()
             void refresh()
