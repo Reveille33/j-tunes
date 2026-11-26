@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { realpathSync } from 'node:fs'
+import { realpath } from 'node:fs/promises'
 import Database from 'better-sqlite3'
 import { runMigrations, createInMemoryDb, type Db } from '../src/main/db/connection'
 import { MIGRATIONS } from '../src/main/db/migrations'
@@ -123,12 +123,14 @@ describe('podcast folders', () => {
   let folders: PodcastFolderRepo
   let dir: string
 
-  beforeEach(() => {
+  beforeEach(async () => {
     db = createInMemoryDb()
     podcasts = new PodcastRepo(db)
     episodes = new EpisodeRepo(db)
     folders = new PodcastFolderRepo(db)
-    dir = realpathSync(mkdtempSync(join(tmpdir(), 'jtunes-folders-')))
+    // Match the realpath the scanner stores. fs.realpathSync keeps Windows
+    // 8.3 names, so a comparison against it fails on the GitHub runner.
+    dir = await realpath(mkdtempSync(join(tmpdir(), 'jtunes-folders-')))
     vi.mocked(fetchFeed).mockReset()
   })
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { realpathSync } from 'node:fs'
+import { realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createInMemoryDb, type Db } from '../src/main/db/connection'
@@ -25,12 +25,14 @@ describe('local podcasts', () => {
   let folders: PodcastFolderRepo
   let dir: string
 
-  beforeEach(() => {
+  beforeEach(async () => {
     db = createInMemoryDb()
     podcasts = new PodcastRepo(db)
     episodes = new EpisodeRepo(db)
     folders = new PodcastFolderRepo(db)
-    dir = realpathSync(mkdtempSync(join(tmpdir(), 'jtunes-local-')))
+    // The app stores fs.promises.realpath. On Windows that expands an 8.3
+    // temp path such as RUNNER~1, which fs.realpathSync leaves unchanged.
+    dir = await realpath(mkdtempSync(join(tmpdir(), 'jtunes-local-')))
     vi.mocked(fetchFeed).mockReset()
   })
 
