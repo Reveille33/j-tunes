@@ -217,6 +217,36 @@ export class EpisodeRepo {
       .run(played ? 1 : 0, Date.now(), id)
   }
 
+  /**
+   * Writes played and the resume point together.
+   * `setPlayed` would clear the position, so an import must not use it.
+   * A missing file is stored as not downloaded in the same update.
+   */
+  setPlayState(
+    id: number,
+    played: boolean,
+    positionSecs: number,
+    missingFile: boolean
+  ): void {
+    const position = Number.isFinite(positionSecs) && positionSecs > 0 ? positionSecs : 0
+    this.db
+      .prepare(
+        `UPDATE episodes SET
+           played = @played,
+           play_position = @position,
+           download_state = CASE WHEN @missing = 1 THEN 'none' ELSE download_state END,
+           updated_at = @now
+         WHERE id = @id`
+      )
+      .run({
+        id,
+        played: played ? 1 : 0,
+        position,
+        missing: missingFile ? 1 : 0,
+        now: Date.now()
+      })
+  }
+
   /** Marks many episodes played/unplayed in a single transaction. */
   setPlayedMany(ids: number[], played: boolean): void {
     if (ids.length === 0) return
@@ -398,10 +428,28 @@ export class EpisodeRepo {
     return rows.map((r) => r.id)
   }
 
-  /**
-   * Every episode's id and title, for the importer's in-memory matching index.
-   * A single query beats a lookup per file per podcast.
-   */
+  /** Episodes of one podcast, for iTunes import matching inside that show. */
+  listForShowMatch(
+    podcastId: number
+  ): { id: number; guid: string; title: string; filePath: string | null }[] {
+    const rows = this.db
+      .prepare(
+        'SELECT id, guid, title, file_path FROM episodes WHERE podcast_id = ? ORDER BY id ASC'
+      )
+      .all(podcastId) as {
+      id: number
+      guid: string
+      title: string
+      file_path: string | null
+    }[]
+    return rows.map((row) => ({
+      id: row.id,
+      guid: row.guid,
+      title: row.title,
+      filePath: row.file_path
+    }))
+  }
+
   /** Episodes of one podcast, for matching files in that show's folders. */
   listForFolderMatch(
     podcastId: number
@@ -414,6 +462,10 @@ export class EpisodeRepo {
     return rows.map((row) => ({ id: row.id, title: row.title, filePath: row.file_path }))
   }
 
+  /**
+   * Every episode's id and title, for the importer's in-memory matching index.
+   * A single query beats a lookup per file per podcast.
+   */
   listForMatching(): { id: number; podcastId: number; title: string }[] {
     const rows = this.db.prepare('SELECT id, podcast_id, title FROM episodes').all() as {
       id: number
