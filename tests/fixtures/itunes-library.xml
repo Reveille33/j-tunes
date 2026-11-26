@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Tracks</key>
+  <dict>
+    <key>1</key>
+    <dict>
+      <key>Track ID</key><integer>1</integer>
+      <key>Name</key><string>Mid bookmark</string>
+      <key>Artist</key><string>Ada Host</string>
+      <key>Album</key><string>Alpha Show</string>
+      <key>Persistent ID</key><string>AAA1</string>
+      <key>Podcast</key><true/>
+      <key>Feed URL</key><string>https://alpha.example/feed.xml</string>
+      <key>Location</key><string>file:///Users/jeff/Music/iTunes/iTunes%20Media/Podcasts/Alpha%20Show/Mid%20bookmark.mp3</string>
+      <key>Total Time</key><integer>3600000</integer>
+      <key>Bookmark</key><integer>120000</integer>
+      <key>Release Date</key><date>2014-06-01T12:00:00Z</date>
+    </dict>
+    <key>2</key>
+    <dict>
+      <key>Track ID</key><integer>2</integer>
+      <key>Name</key><string>Still new</string>
+      <key>Artist</key><string>Ada Host</string>
+      <key>Album</key><string>Alpha Show</string>
+      <key>Persistent ID</key><string>AAA2</string>
+      <key>Podcast</key><true/>
+      <key>Unplayed</key><true/>
+      <key>Play Count</key><integer>4</integer>
+      <key>Location</key><string>file://localhost/Users/jeff/Music/iTunes/iTunes%20Media/Podcasts/Alpha%20Show/Still%20new.mp3</string>
+      <key>Total Time</key><integer>1800000</integer>
+      <key>Release Date</key><date>2014-06-02T12:00:00Z</date>
+    </dict>
+    <key>3</key>
+    <dict>
+      <key>Track ID</key><integer>3</integer>
+      <key>Name</key><string>Almost done</string>
+      <key>Artist</key><string>Ada Host</string>
+      <key>Album</key><string>Alpha Show</string>
+      <key>Persistent ID</key><string>AAA3</string>
+      <key>Podcast</key><true/>
+      <key>Location</key><string>file:///Users/jeff/Music/Podcasts/Alpha/Almost.mp3</string>
+      <key>Total Time</key><integer>3600000</integer>
+      <key>Bookmark</key><integer>3590000</integer>
+    </dict>
+    <key>4</key>
+    <dict>
+      <key>Track ID</key><integer>4</integer>
+      <key>Name</key><string>Heard it</string>
+      <key>Artist</key><string>Ada Host</string>
+      <key>Album</key><string>Alpha Show</string>
+      <key>Persistent ID</key><string>AAA4</string>
+      <key>Podcast</key><true/>
+      <key>Play Count</key><integer>2</integer>
+      <key>Location</key><string>file:///Users/jeff/Music/Podcasts/Alpha/Heard.mp3</string>
+      <key>Total Time</key><integer>600000</integer>
+    </dict>
+    <key>5</key>
+    <dict>
+      <key>Track ID</key><integer>5</integer>
+      <key>Name</key><string>Remote only</string>
+      <key>Artist</key><string>Ada Host</string>
+      <key>Album</key><string>Alpha Show</string>
+      <key>Persistent ID</key><string>AAA5</string>
+      <key>Podcast</key><true/>
+      <key>Location</key><string>http://cdn.example.com/alpha/remote.mp3</string>
+      <key>Total Time</key><integer>600000</integer>
+    </dict>
+    <key>6</key>
+    <dict>
+      <key>Track ID</key><integer>6</integer>
+      <key>Name</key><string>Bad bookmark</string>
+      <key>Artist</key><string>Ada Host</string>
+      <key>Album</key><string>Alpha Show</string>
+      <key>Persistent ID</key><string>AAA6</string>
+      <key>Podcast</key><true/>
+      <key>Play Count</key><integer>1</integer>
+      <key>Location</key><string>file:///Users/jeff/Music/Podcasts/Alpha/Bad.mp3</string>
+      <key>Total Time</key><integer>3600000</integer>
+      <key>Bookmark</key><integer>9000000</integer>
+    </dict>
+    <key>7</key>
+    <dict>
+      <key>Track ID</key><integer>7</integer>
+      <key>Name</key><string>Cafe</string>
+      <key>Artist</key><string>Ada Host</string>
+      <key>Album</key><string>Alpha Show</string>
+      <key>Persistent ID</key><string>AAA7</string>
+      <key>Podcast</key><true/>
+      <key>Location</key><string>file:///Users/jeff/Music/Podcasts/Alpha/Cafe%CC%81.mp3</string>
+      <key>Total Time</key><integer>10000</integer>
+    </dict>
+    <key>8</key>
+    <dict>
+      <key>Track ID</key><integer>8</integer>
+      <key>Name</key><string>Pilot</string>
+      <key>Artist</key><string>Beta Talk</string>
+      <key>Persistent ID</key><string>BBB1</string>
+      <key>Podcast</key><true/>
+      <key>Podcast URL</key><string>http://beta.example/feed</string>
+      <key>Location</key><string>file:///Users/jeff/Music/Podcasts/Beta/Pilot.mp3</string>
+      <key>Total Time</key><integer>1200000</integer>
+    </dict>
+    <key>9</key>
+    <dict>
+      <key>Track ID</key><integer>9</integer>
+      <key>Name</key><string>Notes</string>
+      <key>Artist</key><string>Gail</string>
+      <key>Album</key><string>Gamma</string>
+      <key>Persistent ID</key><string>GGG1</string>
+      <key>Podcast</key><true/>
+      <key>Feed URL</key><string>ftp://gamma.example/feed.xml</string>
+      <key>Location</key><string>file:///Users/jeff/Music/Podcasts/Gamma/Notes.mp3</string>
+      <key>Total Time</key><integer>60000</integer>
+    </dict>
+    <key>10</key>
+    <dict>
+      <key>Track ID</key><integer>10</integer>
+      <key>Name</key><string>Song</string>
+      <key>Artist</key><string>A Band</string>
+      <key>Album</key><string>Alpha Show</string>
+      <key>Persistent ID</key><string>MUS1</string>
+      <key>Podcast</key><false/>
+      <key>Location</key><string>file:///Users/jeff/Music/Song.mp3</string>
+    </dict>
+    <key>11</key>
+    <dict>
+      <key>Track ID</key><integer>11</integer>
+      <key>Name</key><string>No show</string>
+      <key>Persistent ID</key><string>SKIP1</string>
+      <key>Podcast</key><true/>
+    </dict>
+    <key>12</key>
+    <dict>
+      <key>Track ID</key><integer>12</integer>
+      <key>Name</key><string>No id</string>
+      <key>Artist</key><string>Alpha Show</string>
+      <key>Album</key><string>Alpha Show</string>
+      <key>Podcast</key><true/>
+    </dict>
+  </dict>
+  <key>Playlists</key>
+  <array>
+    <dict>
+      <key>Name</key><string>Playlist we ignore</string>
+    </dict>
+  </array>
+</dict>
+</plist>
