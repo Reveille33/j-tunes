@@ -1,4 +1,5 @@
 import { fetchFeed } from './feedService'
+import { feedIsHttp, type FolderScanResult } from './folderScan'
 import { PodcastRepo } from '../db/repositories/podcastRepo'
 import { EpisodeRepo } from '../db/repositories/episodeRepo'
 import { UPDATE_CONCURRENCY } from '@shared/constants'
@@ -10,6 +11,8 @@ export interface UpdateServiceDeps {
   /** Called for every new episode that should be auto-downloaded. */
   onNewEpisodes?: (podcast: Podcast, episodeIds: number[]) => void
   onProgress?: (progress: UpdateProgress) => void
+  /** Scans podcast_folders after the feed step. Omitted in tests that only cover feeds. */
+  scanFolders?: (podcastId: number) => Promise<FolderScanResult>
 }
 
 export interface UpdateOutcome {
@@ -129,69 +132,80 @@ export class UpdateService {
       status: 'checking'
     })
 
-    try {
-      const meta = this.deps.podcasts.getFeedMeta(podcast.id)
-      const result = await fetchFeed(podcast.feedUrl, {
-        etag: meta?.etag ?? null,
-        lastModified: meta?.lastModified ?? null
-      })
+    let feedError: string | undefined
+    let found = 0
+    let added = 0
 
-      if (result.notModified || !result.feed) {
-        this.deps.podcasts.setLastError(podcast.id, null)
-        this.deps.podcasts.setChecked(podcast.id, null, null)
-        return {
-          podcastId: podcast.id,
-          podcastTitle: podcast.title,
-          found: 0,
-          added: 0
+    if (feedIsHttp(podcast.feedUrl)) {
+      try {
+        const meta = this.deps.podcasts.getFeedMeta(podcast.id)
+        const result = await fetchFeed(podcast.feedUrl!, {
+          etag: meta?.etag ?? null,
+          lastModified: meta?.lastModified ?? null
+        })
+
+        if (!result.notModified && result.feed) {
+          const feed = result.feed
+          this.deps.podcasts.updateMeta(podcast.id, {
+            title: feed.title || podcast.title,
+            author: feed.author,
+            description: feed.description,
+            descriptionHtml: feed.descriptionHtml,
+            artworkUrl: feed.artworkUrl,
+            category: feed.category,
+            language: feed.language,
+            link: feed.link,
+            etag: result.etag,
+            lastModified: result.lastModified
+          })
+
+          // Existing guids keep play state, download state, and file_path.
+          const newIds = this.deps.episodes.insertMany(podcast.id, feed.episodes)
+          this.deps.podcasts.refreshCounters(podcast.id)
+          found = feed.episodes.length
+          added = newIds.length
+          if (newIds.length > 0) this.deps.onNewEpisodes?.(podcast, newIds)
         }
+      } catch (error) {
+        // A failing feed must never delete existing episodes.
+        feedError = (error as Error).message
       }
+    }
 
-      const feed = result.feed
-
-      // Update the podcast's own metadata.
-      this.deps.podcasts.updateMeta(podcast.id, {
-        title: feed.title || podcast.title,
-        author: feed.author,
-        description: feed.description,
-        descriptionHtml: feed.descriptionHtml,
-        artworkUrl: feed.artworkUrl,
-        category: feed.category,
-        language: feed.language,
-        link: feed.link,
-        etag: result.etag,
-        lastModified: result.lastModified
-      })
-
-      // Insert new episodes. Existing guids keep play state, download state,
-      // and file_path; insertMany refreshes title and media fields that changed.
-      const newIds = this.deps.episodes.insertMany(podcast.id, feed.episodes)
-      this.deps.podcasts.refreshCounters(podcast.id)
-      this.deps.podcasts.setLastError(podcast.id, null)
-      this.deps.podcasts.setChecked(podcast.id, null, null)
-
-      if (newIds.length > 0) {
-        this.deps.onNewEpisodes?.(podcast, newIds)
+    let missing: string[] = []
+    if (this.deps.scanFolders) {
+      try {
+        const scan = await this.deps.scanFolders(podcast.id)
+        added += scan.added
+        missing = scan.missing
+      } catch (error) {
+        feedError = feedError ?? (error as Error).message
       }
+    }
 
+    const folderError =
+      missing.length > 0 ? `Folder not found: ${missing.join(', ')}` : undefined
+    const error = [feedError, folderError].filter(Boolean).join('; ')
+
+    if (error) {
+      this.deps.podcasts.setLastError(podcast.id, error.slice(0, 500))
+      if (!feedError) this.deps.podcasts.setChecked(podcast.id, null, null)
       return {
         podcastId: podcast.id,
         podcastTitle: podcast.title,
-        found: feed.episodes.length,
-        added: newIds.length
+        found,
+        added,
+        error
       }
-    } catch (error) {
-      // A failing feed must never delete existing episodes or look like a
-      // successful check that found nothing.
-      const message = (error as Error).message
-      this.deps.podcasts.setLastError(podcast.id, message.slice(0, 500))
-      return {
-        podcastId: podcast.id,
-        podcastTitle: podcast.title,
-        found: 0,
-        added: 0,
-        error: message
-      }
+    }
+
+    this.deps.podcasts.setLastError(podcast.id, null)
+    this.deps.podcasts.setChecked(podcast.id, null, null)
+    return {
+      podcastId: podcast.id,
+      podcastTitle: podcast.title,
+      found,
+      added
     }
   }
 }

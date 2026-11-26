@@ -18,7 +18,8 @@ export type SortDirection = 'asc' | 'desc'
 /** A subscribed podcast. */
 export interface Podcast {
   id: number
-  feedUrl: string
+  /** Null for a local-only show. Older imports keep their `import://` value. */
+  feedUrl: string | null
   title: string
   author: string | null
   description: string | null
@@ -119,6 +120,14 @@ export interface ParsedEpisode {
   artworkUrl: string | null
   /** Link to a Podcast 2.0 chapters document, when the feed advertises one. */
   chaptersUrl?: string | null
+}
+
+/** An extra on-disk location for a podcast. Not the app download directory. */
+export interface PodcastFolder {
+  id: number
+  podcastId: number
+  path: string
+  createdAt: number
 }
 
 /** A saved playlist, without its episode rows. */

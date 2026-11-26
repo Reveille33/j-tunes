@@ -25,7 +25,7 @@ function applyPragmas(db: Db): void {
  * Runs the ordered migration files inside a transaction each, recording
  * applied versions in `schema_migrations` so re-running is a no-op.
  */
-function runMigrations(db: Db): void {
+export function runMigrations(db: Db): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       version    TEXT PRIMARY KEY,
@@ -36,13 +36,21 @@ function runMigrations(db: Db): void {
   const isApplied = db.prepare('SELECT 1 FROM schema_migrations WHERE version = ?')
   const record = db.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)')
 
-  for (const migration of MIGRATIONS) {
-    if (isApplied.get(migration.version)) continue
+  // 006 rebuilds podcasts. With foreign keys on, dropping that table would
+  // cascade-delete every episode. The pragma cannot change inside a transaction.
+  const foreignKeys = db.pragma('foreign_keys', { simple: true })
+  db.pragma('foreign_keys = OFF')
+  try {
+    for (const migration of MIGRATIONS) {
+      if (isApplied.get(migration.version)) continue
 
-    db.transaction(() => {
-      db.exec(migration.sql)
-      record.run(migration.version, Date.now())
-    })()
+      db.transaction(() => {
+        db.exec(migration.sql)
+        record.run(migration.version, Date.now())
+      })()
+    }
+  } finally {
+    if (foreignKeys) db.pragma('foreign_keys = ON')
   }
 }
 

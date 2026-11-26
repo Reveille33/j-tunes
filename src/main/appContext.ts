@@ -7,12 +7,14 @@ import { ImportJobRepo } from './db/repositories/importJobRepo'
 import { ChapterRepo } from './db/repositories/chapterRepo'
 import { QueueRepo } from './db/repositories/queueRepo'
 import { PlaylistRepo } from './db/repositories/playlistRepo'
+import { PodcastFolderRepo } from './db/repositories/podcastFolderRepo'
 import { StatsRepo } from './db/repositories/statsRepo'
 import { UpdateService } from './services/updateService'
 import { DownloadManager } from './services/downloadManager'
 import { Importer } from './services/importer'
 import { PlaybackService } from './services/playbackService'
 import { autoDownloadEnabled } from './services/initialDownload'
+import { scanPodcastFolders } from './services/folderScan'
 import { OpmlImportService } from './services/opmlImportService'
 import { defaultDownloadDir } from './util/paths'
 import type { AppSettings, DownloadQueueItem, UpdateProgress } from '@shared/types'
@@ -31,6 +33,7 @@ export class AppContext {
   readonly chapters: ChapterRepo
   readonly queue: QueueRepo
   readonly playlists: PlaylistRepo
+  readonly folders: PodcastFolderRepo
   readonly stats: StatsRepo
   readonly playback: PlaybackService
   readonly opmlImporter: OpmlImportService
@@ -48,6 +51,7 @@ export class AppContext {
     this.chapters = new ChapterRepo(this.db)
     this.queue = new QueueRepo(this.db)
     this.playlists = new PlaylistRepo(this.db)
+    this.folders = new PodcastFolderRepo(this.db)
     this.stats = new StatsRepo(this.db)
     this.playback = new PlaybackService({
       queue: this.queue,
@@ -69,6 +73,11 @@ export class AppContext {
       podcasts: this.podcasts,
       episodes: this.episodes,
       onProgress: (progress: UpdateProgress) => this.emit('updates:progress', progress),
+      scanFolders: (podcastId) =>
+        scanPodcastFolders(
+          { episodes: this.episodes, folders: this.folders, podcasts: this.podcasts },
+          podcastId
+        ),
       onNewEpisodes: (podcast, episodeIds) => {
         // Every episode that is new since the last check, when both flags are on.
         const settings = this.getSettings()

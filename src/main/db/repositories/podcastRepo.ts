@@ -3,7 +3,7 @@ import type { Podcast } from '@shared/types'
 
 interface PodcastRow {
   id: number
-  feed_url: string
+  feed_url: string | null
   title: string
   author: string | null
   description: string | null
@@ -78,7 +78,7 @@ export class PodcastRepo {
   }
 
   create(input: {
-    feedUrl: string
+    feedUrl: string | null
     title: string
     author?: string | null
     description?: string | null

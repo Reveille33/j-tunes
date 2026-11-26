@@ -187,5 +187,67 @@ CREATE TABLE IF NOT EXISTS playlist_episodes (
 CREATE INDEX IF NOT EXISTS idx_playlist_episodes_position
   ON playlist_episodes(playlist_id, position);
 `
+  },
+  {
+    version: '006_podcast_folders',
+    sql: `
+-- feed_url has to become nullable. SQLite cannot drop NOT NULL in place, so
+-- the table is copied. Foreign keys are turned off by the migration runner
+-- for this step: dropping podcasts would otherwise delete every episode.
+CREATE TABLE podcasts_new (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  feed_url          TEXT UNIQUE,
+  title             TEXT    NOT NULL,
+  author            TEXT,
+  description       TEXT,
+  description_html  TEXT,
+  artwork_url       TEXT,
+  category          TEXT,
+  language          TEXT,
+  link              TEXT,
+  etag              TEXT,
+  last_modified     TEXT,
+  last_checked_at   INTEGER,
+  last_episode_at   INTEGER,
+  episode_count     INTEGER NOT NULL DEFAULT 0,
+  subscribed_at     INTEGER NOT NULL,
+  auto_download     INTEGER NOT NULL DEFAULT 1,
+  is_active         INTEGER NOT NULL DEFAULT 1,
+  sort_order        INTEGER NOT NULL DEFAULT 0,
+  last_error        TEXT
+);
+
+INSERT INTO podcasts_new (
+  id, feed_url, title, author, description, description_html, artwork_url, category,
+  language, link, etag, last_modified, last_checked_at, last_episode_at, episode_count,
+  subscribed_at, auto_download, is_active, sort_order, last_error
+)
+SELECT
+  id, feed_url, title, author, description, description_html, artwork_url, category,
+  language, link, etag, last_modified, last_checked_at, last_episode_at, episode_count,
+  subscribed_at, auto_download, is_active, sort_order, last_error
+FROM podcasts;
+
+DROP TABLE podcasts;
+ALTER TABLE podcasts_new RENAME TO podcasts;
+
+DELETE FROM sqlite_sequence WHERE name = 'podcasts';
+INSERT INTO sqlite_sequence (name, seq)
+SELECT 'podcasts', COALESCE(MAX(id), 0) FROM podcasts;
+
+CREATE INDEX IF NOT EXISTS idx_podcasts_last_episode ON podcasts(is_active, last_episode_at DESC);
+CREATE INDEX IF NOT EXISTS idx_podcasts_title        ON podcasts(title COLLATE NOCASE);
+
+-- Extra on-disk locations for a show. The download directory is not one of these.
+CREATE TABLE IF NOT EXISTS podcast_folders (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  podcast_id INTEGER NOT NULL REFERENCES podcasts(id) ON DELETE CASCADE,
+  path       TEXT    NOT NULL,
+  created_at INTEGER NOT NULL,
+  UNIQUE (path)
+);
+
+CREATE INDEX IF NOT EXISTS idx_podcast_folders_podcast ON podcast_folders(podcast_id);
+`
   }
 ]
