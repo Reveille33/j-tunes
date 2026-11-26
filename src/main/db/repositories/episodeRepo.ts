@@ -402,6 +402,18 @@ export class EpisodeRepo {
    * Every episode's id and title, for the importer's in-memory matching index.
    * A single query beats a lookup per file per podcast.
    */
+  /** Episodes of one podcast, for matching files in that show's folders. */
+  listForFolderMatch(
+    podcastId: number
+  ): { id: number; title: string; filePath: string | null }[] {
+    const rows = this.db
+      .prepare(
+        'SELECT id, title, file_path FROM episodes WHERE podcast_id = ? ORDER BY id ASC'
+      )
+      .all(podcastId) as { id: number; title: string; file_path: string | null }[]
+    return rows.map((row) => ({ id: row.id, title: row.title, filePath: row.file_path }))
+  }
+
   listForMatching(): { id: number; podcastId: number; title: string }[] {
     const rows = this.db.prepare('SELECT id, podcast_id, title FROM episodes').all() as {
       id: number

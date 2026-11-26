@@ -23,6 +23,7 @@ import type {
   PlaylistDetail,
   PlaylistSummary,
   Podcast,
+  PodcastFolder,
   StorageSummary,
   Theme,
   UpdateProgress
@@ -64,6 +65,12 @@ const api = {
     ipcRenderer.invoke(IPC.PODCAST_SET_AUTO_DOWNLOAD, { podcastId, autoDownload }),
   searchFeed: (query: string, limit?: number): Promise<FeedSearchResult[]> =>
     ipcRenderer.invoke(IPC.PODCAST_SEARCH_FEED, { query, limit }),
+  listPodcastFolders: (podcastId: number): Promise<PodcastFolder[]> =>
+    ipcRenderer.invoke(IPC.PODCAST_FOLDERS_LIST, { podcastId }),
+  addPodcastFolder: (podcastId: number, path: string): Promise<PodcastFolder> =>
+    ipcRenderer.invoke(IPC.PODCAST_FOLDERS_ADD, { podcastId, path }),
+  removePodcastFolder: (folderId: number): Promise<void> =>
+    ipcRenderer.invoke(IPC.PODCAST_FOLDERS_REMOVE, { folderId }),
 
   // Episodes
   queryEpisodes: (query: EpisodeQuery): Promise<EpisodePage> =>

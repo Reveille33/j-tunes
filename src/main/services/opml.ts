@@ -12,8 +12,8 @@ export function escapeXml(value: string): string {
 }
 
 /** True for subscriptions that point at a real feed. */
-function isRealFeed(podcast: Podcast): boolean {
-  return /^https?:\/\//i.test(podcast.feedUrl)
+function isRealFeed(podcast: Podcast): podcast is Podcast & { feedUrl: string } {
+  return podcast.feedUrl != null && /^https?:\/\//i.test(podcast.feedUrl)
 }
 
 /**

@@ -45,6 +45,19 @@ export const subscribeSchema = z.object({
   feedUrl: z.string().min(4).max(2048)
 })
 
+export const podcastFoldersListSchema = z.object({
+  podcastId: idSchema
+})
+
+export const podcastFolderAddSchema = z.object({
+  podcastId: idSchema,
+  path: z.string().trim().min(1).max(4096)
+})
+
+export const podcastFolderRemoveSchema = z.object({
+  folderId: idSchema
+})
+
 export const unsubscribeSchema = z.object({
   podcastId: idSchema,
   fileAction: fileActionSchema

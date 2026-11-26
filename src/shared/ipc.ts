@@ -24,6 +24,7 @@ import type {
   PlaylistDetail,
   PlaylistSummary,
   Podcast,
+  PodcastFolder,
   StorageSummary,
   Theme,
   UpdateProgress
@@ -38,6 +39,9 @@ export const IPC = {
   PODCAST_SET_AUTO_DOWNLOAD: 'podcast:setAutoDownload',
   PODCAST_SEARCH_FEED: 'podcast:searchFeed',
   PODCAST_PREVIEW_FEED: 'podcast:previewFeed',
+  PODCAST_FOLDERS_LIST: 'podcast:folders:list',
+  PODCAST_FOLDERS_ADD: 'podcast:folders:add',
+  PODCAST_FOLDERS_REMOVE: 'podcast:folders:remove',
 
   // Episodes
   EPISODES_QUERY: 'episodes:query',
@@ -125,6 +129,9 @@ export interface JTunesApi {
   unsubscribe(podcastId: number, fileAction: FileAction): Promise<OperationResult>
   setAutoDownload(podcastId: number, autoDownload: boolean): Promise<void>
   searchFeed(query: string, limit?: number): Promise<FeedSearchResult[]>
+  listPodcastFolders(podcastId: number): Promise<PodcastFolder[]>
+  addPodcastFolder(podcastId: number, path: string): Promise<PodcastFolder>
+  removePodcastFolder(folderId: number): Promise<void>
 
   // Episodes
   queryEpisodes(query: EpisodeQuery): Promise<EpisodePage>

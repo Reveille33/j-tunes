@@ -1,11 +1,18 @@
 import { ipcMain, dialog, shell } from 'electron'
+import { join } from 'node:path'
+import { realpath } from 'node:fs/promises'
 import { IPC } from '@shared/ipc'
 import {
   subscribeSchema,
   unsubscribeSchema,
   setAutoDownloadSchema,
-  searchFeedSchema
+  searchFeedSchema,
+  podcastFoldersListSchema,
+  podcastFolderAddSchema,
+  podcastFolderRemoveSchema
 } from '@shared/validation'
+import { sanitiseFileName } from '../util/fsHelpers'
+import { unsubscribeTrashPlan } from '../services/sourceFolders'
 import { canonicaliseFeedUrl, fetchFeed } from '../services/feedService'
 import { queueNewestSubscribedEpisode } from '../services/initialDownload'
 import { subscribeToFeed } from '../services/subscriptionService'
@@ -81,11 +88,19 @@ export function registerPodcastHandlers(ctx: AppContext): void {
 
     ctx.downloads.cancelPodcast(podcastId)
     const filePaths = ctx.podcasts.getDownloadedFilePaths(podcastId)
+    const sourceFolders = ctx.folders.list(podcastId).map((folder) => folder.path)
+    const plan = unsubscribeTrashPlan({
+      filePaths,
+      sourceFolders,
+      downloadFolder: join(ctx.getDownloadDir(), sanitiseFileName(podcast.title))
+    })
 
-    if (fileAction === 'trash' && filePaths.length > 0) {
-      const trashed = await trashFiles(filePaths)
-      // Remove the now-empty podcast folder as well.
-      await removeEmptyPodcastFolder(podcast.title, ctx.getDownloadDir())
+    if (fileAction === 'trash') {
+      const trashed = plan.trash.length > 0 ? await trashFiles(plan.trash) : 0
+      // Never remove a source folder, or a download folder that contains one.
+      if (plan.removeDownloadFolder) {
+        await removeEmptyPodcastFolder(podcast.title, ctx.getDownloadDir())
+      }
       ctx.podcasts.remove(podcastId)
       return { ok: true, fileCount: trashed }
     }
@@ -105,6 +120,27 @@ export function registerPodcastHandlers(ctx: AppContext): void {
     return searchFeeds(query, limit)
   })
 
+  ipcMain.handle(IPC.PODCAST_FOLDERS_LIST, (_event, raw: unknown) => {
+    const { podcastId } = podcastFoldersListSchema.parse(raw)
+    return ctx.folders.list(podcastId)
+  })
+
+  ipcMain.handle(IPC.PODCAST_FOLDERS_ADD, async (_event, raw: unknown) => {
+    const { podcastId, path } = podcastFolderAddSchema.parse(raw)
+    let stored = path
+    try {
+      stored = await realpath(path)
+    } catch {
+      stored = path
+    }
+    return ctx.folders.add(podcastId, stored)
+  })
+
+  ipcMain.handle(IPC.PODCAST_FOLDERS_REMOVE, (_event, raw: unknown) => {
+    const { folderId } = podcastFolderRemoveSchema.parse(raw)
+    ctx.folders.remove(folderId)
+  })
+
   ipcMain.handle(IPC.LIBRARY_PICK_FOLDER, async () => {
     const result = await dialog.showOpenDialog({
       properties: ['openDirectory', 'multiSelections']
@@ -116,8 +152,6 @@ export function registerPodcastHandlers(ctx: AppContext): void {
 /** Removes a podcast's download folder when it no longer contains files. */
 async function removeEmptyPodcastFolder(podcastTitle: string, downloadDir: string): Promise<void> {
   try {
-    const { join } = await import('node:path')
-    const { sanitiseFileName } = await import('../util/fsHelpers')
     const { readdir, rmdir } = await import('node:fs/promises')
     const dir = join(downloadDir, sanitiseFileName(podcastTitle))
     const entries = await readdir(dir)
