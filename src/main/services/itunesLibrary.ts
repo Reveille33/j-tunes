@@ -28,8 +28,9 @@ export interface ItunesEpisode {
   /** `Release Date` as epoch milliseconds. */
   releaseDate: number | null
   /**
-   * `Location` decoded with `fileURLToPath` and NFC-normalised.
-   * Null for anything that is not a file URL, including http episode URLs.
+   * `Location` decoded to a filesystem path and NFC-normalised.
+   * A drive letter selects Windows rules; anything else is a POSIX path,
+   * including a Mac library opened on Windows. Null when it is not a local file.
    */
   filePath: string | null
   played: boolean
@@ -248,16 +249,25 @@ function filePathFromLocation(location: string | null): string | null {
     return null
   }
   if (url.protocol !== 'file:') return null
+  // file://localhost is a local file. WHATWG parsing usually clears that host.
+  // Any other host is a share, not a file on this machine.
+  const host = url.hostname
+  if (host !== '' && host.toLowerCase() !== 'localhost') return null
   try {
-    return fileURLToPath(url).normalize('NFC')
+    // The URL's shape picks the rules. A Mac `file:///Users/...` library has no
+    // drive letter, so it stays a POSIX path on Windows instead of staying
+    // percent-encoded. `file:///C:/...` uses Windows rules on every OS.
+    const filePath = fileURLToPath(url, { windows: windowsFileUrl(url.pathname) })
+    const normalised = filePath.normalize('NFC')
+    return normalised.length > 0 ? normalised : null
   } catch {
-    // A Mac `file:///Users/...` URL has no drive letter, so Windows rejects it.
-    // Keep the decoded POSIX path. A host other than localhost is not a local file.
-    const host = url.hostname
-    if (host !== '' && host.toLowerCase() !== 'localhost') return null
-    const path = url.pathname.normalize('NFC')
-    return path.length > 0 ? path : null
+    return null
   }
+}
+
+/** `file:///C:/...` has a drive letter. `file:///Users/...` does not. */
+function windowsFileUrl(pathname: string): boolean {
+  return /^\/[A-Za-z]:(?:\/|$)/.test(pathname)
 }
 
 function httpUrl(value: string | null): string | null {
