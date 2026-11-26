@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import { IPC } from '@shared/ipc'
-import { themeFromArgv } from '@shared/themeArg'
+import { applyDocumentTheme, themeFromArgv } from '@shared/themeArg'
+import type { ThemeDocument } from '@shared/themeArg'
 import type {
   AppSettings,
   BulkPlayedRequest,
@@ -33,12 +34,6 @@ import type {
 import type { PlaylistAddInput } from '@shared/validation'
 
 const initialTheme = themeFromArgv(process.argv) ?? 'dark'
-// The preload project is typechecked without the DOM lib. The document exists
-// here because this script runs in the renderer before the page paints.
-const page = globalThis as typeof globalThis & {
-  document: { documentElement: { setAttribute(name: string, value: string): void } }
-}
-page.document.documentElement.setAttribute('data-theme', initialTheme)
 contextBridge.exposeInMainWorld('jTunesInitialTheme', initialTheme)
 
 /**
@@ -196,3 +191,8 @@ const api = {
 export type JTunesApi = typeof api
 
 contextBridge.exposeInMainWorld('api', api)
+
+// The preload project is typechecked without the DOM lib. Apply the theme
+// only after the bridge exists, and only once the root element is there.
+const page = globalThis as typeof globalThis & { document: ThemeDocument }
+applyDocumentTheme(page.document, initialTheme)
