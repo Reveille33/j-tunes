@@ -30,6 +30,7 @@ export function CommandPalette({ onPlay, onClose }: CommandPaletteProps): React.
   const setShortcutsOpen = useUiStore((s) => s.setShortcutsOpen)
   const setAddPodcastOpen = useUiStore((s) => s.setAddPodcastOpen)
   const setImportOpen = useUiStore((s) => s.setImportOpen)
+  const setItunesImportOpen = useUiStore((s) => s.setItunesImportOpen)
   const setOpmlImportOpen = useUiStore((s) => s.setOpmlImportOpen)
 
   const [query, setQuery] = useState('')
@@ -69,6 +70,7 @@ export function CommandPalette({ onPlay, onClose }: CommandPaletteProps): React.
     const actions: PaletteItem[] = [
       { key: 'add', label: 'Add a podcast', hint: 'Action', run: () => { onClose(); setAddPodcastOpen(true) } },
       { key: 'import', label: 'Import legacy library', hint: 'Action', run: () => { onClose(); setImportOpen(true) } },
+      { key: 'itunes', label: 'Import iTunes Library…', hint: 'Action', run: () => { onClose(); setItunesImportOpen(true) } },
       { key: 'opml', label: 'Import subscriptions (OPML)', hint: 'Action', run: () => { onClose(); setOpmlImportOpen(true) } },
       { key: 'settings', label: 'Open settings', hint: 'Action', run: () => { onClose(); setSettingsOpen(true) } },
       { key: 'storage', label: 'Manage downloads', hint: 'Action', run: () => { onClose(); setStorageOpen(true) } },
@@ -109,6 +111,7 @@ export function CommandPalette({ onPlay, onClose }: CommandPaletteProps): React.
     selectPodcast,
     setAddPodcastOpen,
     setImportOpen,
+    setItunesImportOpen,
     setOpmlImportOpen,
     setSettingsOpen,
     setStatsOpen,

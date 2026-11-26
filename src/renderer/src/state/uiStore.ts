@@ -27,6 +27,7 @@ interface UiState {
   isStatsOpen: boolean
   isStorageOpen: boolean
   isOpmlImportOpen: boolean
+  isItunesImportOpen: boolean
   isPaletteOpen: boolean
   isShortcutsOpen: boolean
   /** Episodes ticked for a bulk action. */
@@ -52,6 +53,7 @@ interface UiState {
   setStatsOpen: (open: boolean) => void
   setStorageOpen: (open: boolean) => void
   setOpmlImportOpen: (open: boolean) => void
+  setItunesImportOpen: (open: boolean) => void
   setPaletteOpen: (open: boolean) => void
   setShortcutsOpen: (open: boolean) => void
   toggleEpisodeSelected: (episodeId: number) => void
@@ -86,6 +88,7 @@ export const useUiStore = create<UiState>((set) => ({
   isStatsOpen: false,
   isStorageOpen: false,
   isOpmlImportOpen: false,
+  isItunesImportOpen: false,
   isPaletteOpen: false,
   isShortcutsOpen: false,
   selectedEpisodeIds: new Set<number>(),
@@ -117,6 +120,7 @@ export const useUiStore = create<UiState>((set) => ({
   setStatsOpen: (isStatsOpen) => set({ isStatsOpen }),
   setStorageOpen: (isStorageOpen) => set({ isStorageOpen }),
   setOpmlImportOpen: (isOpmlImportOpen) => set({ isOpmlImportOpen }),
+  setItunesImportOpen: (isItunesImportOpen) => set({ isItunesImportOpen }),
   setPaletteOpen: (isPaletteOpen) => set({ isPaletteOpen }),
   setShortcutsOpen: (isShortcutsOpen) => set({ isShortcutsOpen }),
   toggleEpisodeSelected: (episodeId) =>

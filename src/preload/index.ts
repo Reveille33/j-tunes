@@ -14,6 +14,8 @@ import type {
   FileAction,
   ImportProgress,
   ImportSummary,
+  ItunesImportSummary,
+  ItunesLibraryPreview,
   LibraryStats,
   MediaSource,
   OperationResult,
@@ -152,6 +154,10 @@ const api = {
   importOpml: (): Promise<OpmlImportSummary | null> =>
     ipcRenderer.invoke(IPC.LIBRARY_IMPORT_OPML),
   cancelOpmlImport: (): Promise<void> => ipcRenderer.invoke(IPC.LIBRARY_CANCEL_OPML),
+  previewItunesLibrary: (): Promise<ItunesLibraryPreview | null> =>
+    ipcRenderer.invoke(IPC.LIBRARY_ITUNES_PREVIEW),
+  importItunesLibrary: (filePath: string): Promise<ItunesImportSummary> =>
+    ipcRenderer.invoke(IPC.LIBRARY_ITUNES_IMPORT, { filePath }),
 
   // Player
   savePlaybackPosition: (episodeId: number, position: number, duration: number): Promise<void> =>

@@ -96,6 +96,11 @@ export const importSchema = z.object({
   paths: z.array(z.string().min(1)).min(1).max(500)
 })
 
+/** Path of an iTunes Library.xml chosen by the native file picker. */
+export const itunesLibraryPathSchema = z.object({
+  filePath: z.string().trim().min(1).max(4096)
+})
+
 export const searchFeedSchema = z.object({
   query: z.string().min(1).max(200),
   limit: z.number().int().min(1).max(50).optional()

@@ -31,6 +31,7 @@ export function Sidebar({
   const setStatsOpen = useUiStore((s) => s.setStatsOpen)
   const setStorageOpen = useUiStore((s) => s.setStorageOpen)
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen)
+  const setItunesImportOpen = useUiStore((s) => s.setItunesImportOpen)
   const queueItems = useQueueStore((s) => s.items)
   const removeFromQueue = useQueueStore((s) => s.remove)
   const moveInQueue = useQueueStore((s) => s.move)
@@ -196,6 +197,9 @@ export function Sidebar({
       <div className="sidebar-section sidebar-section-bottom">
         <button className="sidebar-item" onClick={onImport}>
           <span className="sidebar-item-label">Import Legacy Library…</span>
+        </button>
+        <button className="sidebar-item" onClick={() => setItunesImportOpen(true)}>
+          <span className="sidebar-item-label">Import iTunes Library…</span>
         </button>
         <button className="sidebar-item" onClick={() => setStorageOpen(true)}>
           <span className="sidebar-item-label">Manage Downloads</span>
