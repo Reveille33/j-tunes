@@ -32,6 +32,13 @@ export class PodcastFolderRepo {
     }))
   }
 
+  findByPath(path: string): { id: number; podcastId: number } | null {
+    const row = this.db
+      .prepare('SELECT id, podcast_id FROM podcast_folders WHERE path = ?')
+      .get(path) as { id: number; podcast_id: number } | undefined
+    return row ? { id: row.id, podcastId: row.podcast_id } : null
+  }
+
   add(podcastId: number, path: string): PodcastFolder {
     if (!this.db.prepare('SELECT 1 FROM podcasts WHERE id = ?').get(podcastId)) {
       throw new Error('Podcast not found')
