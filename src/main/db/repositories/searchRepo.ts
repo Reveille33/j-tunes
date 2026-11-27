@@ -1,5 +1,6 @@
 import { knownPrecision } from '@shared/releaseDate'
 import type { Db } from '../connection'
+import { releaseYearSql } from '../releaseYearSql'
 import type { Episode, EpisodePage, EpisodeQuery, SortBy } from '@shared/types'
 
 interface SearchRow {
@@ -185,10 +186,8 @@ export class SearchRepo {
     }
 
     if (filters.year != null) {
-      const bounds = yearBounds(filters.year)
-      params.yearStart = bounds.start
-      params.yearEnd = bounds.end
-      where.push('e.release_date >= @yearStart AND e.release_date < @yearEnd')
+      params.year = filters.year
+      where.push(`${releaseYearSql('e')} = @year`)
     }
 
     if (params.played !== null) {

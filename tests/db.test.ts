@@ -137,7 +137,7 @@ describe('database layer', () => {
     expect(byFilename.total).toBeGreaterThanOrEqual(1)
   })
 
-  it('filters by year using the indexed release_date range', () => {
+  it('filters by the displayed release year', () => {
     const pod = podcasts.create({ feedUrl: 'https://example.com/f.xml', title: 'Show' })
     episodes.insertMany(pod.id, [
       episode({ guid: 'y2019', releaseDate: new Date(2019, 2, 3).getTime() }),

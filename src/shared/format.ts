@@ -43,6 +43,24 @@ export function formatBytes(bytes: number | null | undefined): string {
 }
 
 /**
+ * The calendar year `formatDate` shows for this stamp.
+ * A year-only value uses that year. A UTC-noon calendar day uses the UTC year,
+ * which is the day stored by a folder scan.
+ */
+export function displayedReleaseYear(
+  timestamp: number,
+  precision?: ReleasePrecision | null
+): number {
+  const date = new Date(timestamp)
+  const resolved = precision ?? inferPrecision(timestamp)
+  if (resolved === 'year') {
+    return inferPrecision(timestamp) === 'year' ? date.getFullYear() : date.getUTCFullYear()
+  }
+  if (isUtcNoon(timestamp)) return date.getUTCFullYear()
+  return date.getFullYear()
+}
+
+/**
  * Formats a release date as `MMM D, YYYY`, or an em dash when unknown.
  * A year-only date is the year on its own. January 1 is not invented.
  */
@@ -52,11 +70,7 @@ export function formatDate(
 ): string {
   if (!timestamp) return '--'
   const resolved = precision ?? inferPrecision(timestamp)
-  if (resolved === 'year') {
-    const date = new Date(timestamp)
-    const year = inferPrecision(timestamp) === 'year' ? date.getFullYear() : date.getUTCFullYear()
-    return String(year)
-  }
+  if (resolved === 'year') return String(displayedReleaseYear(timestamp, precision))
   const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short' }
   if (resolved === 'day') options.day = 'numeric'
   if (isUtcNoon(timestamp)) options.timeZone = 'UTC'

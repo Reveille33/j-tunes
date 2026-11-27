@@ -22,6 +22,7 @@ import { PlaylistView } from './components/playlists/PlaylistView'
 import { commitPlaylistAdd } from './playlistActions'
 import { useUiStore } from './state/uiStore'
 import { canPersistSetting } from '@shared/settingsPersist'
+import { yearForShow } from '@shared/yearFilter'
 import { usePodcastStore } from './state/podcastStore'
 import { useEpisodeStore } from './state/episodeStore'
 import { usePlayerStore } from './state/playerStore'
@@ -108,19 +109,49 @@ export function App(): React.JSX.Element {
   const player = usePlayer(audio, { onEnded: handleEnded })
   playerRef.current = player
 
-  /** Reloads podcasts and years from the database. */
+  const applyYears = useCallback(
+    (podcastId: number | null, years: number[]) => {
+      if (useUiStore.getState().selectedPodcastId !== podcastId) return
+      setYears(years)
+      const selected = useUiStore.getState().year
+      const next = yearForShow(selected, years)
+      if (next !== selected) useUiStore.getState().setYear(next)
+    },
+    [setYears]
+  )
+
+  /** Reloads podcasts and the years for the view that is open. */
   const loadLibrary = useCallback(async () => {
+    const podcastId = useUiStore.getState().selectedPodcastId
     try {
       const [podcasts, years] = await Promise.all([
         window.api.listPodcasts(true),
-        window.api.listYears()
+        window.api.listYears(podcastId)
       ])
       setPodcasts(podcasts)
-      setYears(years)
+      applyYears(podcastId, years)
     } catch (error) {
       showToast((error as Error).message, 'error')
     }
-  }, [setPodcasts, setYears, showToast])
+  }, [applyYears, setPodcasts, showToast])
+
+  // A single show only offers years that show actually has. All episodes
+  // keeps the library-wide list. A year the show does not have falls back
+  // to All years.
+  useEffect(() => {
+    let cancelled = false
+    void window.api
+      .listYears(selectedPodcastId)
+      .then((years) => {
+        if (!cancelled) applyYears(selectedPodcastId, years)
+      })
+      .catch((error: Error) => {
+        if (!cancelled) showToast(error.message, 'error')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [applyYears, selectedPodcastId, showToast])
 
   // Load the library and apply the stored settings on startup.
   useEffect(() => {
