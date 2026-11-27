@@ -1,3 +1,5 @@
+import type { ReleaseDate, ReleasePrecision } from '@shared/releaseDate'
+import { inferPrecision, isClearerDate, knownPrecision } from '@shared/releaseDate'
 import type { Db } from '../connection'
 import type { DownloadState, ParsedEpisode } from '@shared/types'
 
@@ -12,6 +14,7 @@ export interface EpisodeInsert {
   mediaLength?: number | null
   durationSecs?: number | null
   releaseDate?: number | null
+  releasePrecision?: ReleasePrecision | null
   episodeNumber?: number | null
   seasonNumber?: number | null
   artworkUrl?: string | null
@@ -102,11 +105,11 @@ export class EpisodeRepo {
       .prepare(
         `INSERT OR IGNORE INTO episodes
            (podcast_id, guid, title, description, description_html, media_url, media_type,
-            media_length, duration_secs, release_date, episode_number, season_number,
+            media_length, duration_secs, release_date, release_precision, episode_number, season_number,
             artwork_url, file_path, file_size, download_state, duration_known, is_imported,
             created_at, updated_at)
          VALUES (@podcastId, @guid, @title, @description, @descriptionHtml, @mediaUrl, @mediaType,
-                 @mediaLength, @durationSecs, @releaseDate, @episodeNumber, @seasonNumber,
+                 @mediaLength, @durationSecs, @releaseDate, @releasePrecision, @episodeNumber, @seasonNumber,
                  @artworkUrl, @filePath, @fileSize, 'done', @durationKnown, 1, @now, @now)`
       )
       .run({
@@ -120,6 +123,7 @@ export class EpisodeRepo {
         mediaLength: input.mediaLength ?? null,
         durationSecs: input.durationSecs ?? null,
         releaseDate: input.releaseDate ?? null,
+        releasePrecision: input.releasePrecision ?? null,
         episodeNumber: input.episodeNumber ?? null,
         seasonNumber: input.seasonNumber ?? null,
         artworkUrl: input.artworkUrl ?? null,
@@ -152,6 +156,33 @@ export class EpisodeRepo {
          WHERE guid = @guid AND file_path IS NULL`
       )
       .run({ guid, filePath, fileSize, now: Date.now() })
+    return info.changes > 0
+  }
+
+  /**
+   * Writes a more precise release date. Playback, download state, and the
+   * file path are left alone, so a rescan can repair a year-only placeholder.
+   */
+  upgradeReleaseDate(id: number, incoming: ReleaseDate): boolean {
+    const row = this.db
+      .prepare('SELECT release_date, release_precision FROM episodes WHERE id = ?')
+      .get(id) as { release_date: number | null; release_precision: string | null } | undefined
+    if (!row) return false
+    const current =
+      row.release_date == null
+        ? null
+        : {
+            timestamp: row.release_date,
+            precision: knownPrecision(row.release_precision) ?? inferPrecision(row.release_date)
+          }
+    if (!isClearerDate(current, incoming)) return false
+    const info = this.db
+      .prepare(
+        `UPDATE episodes
+         SET release_date = @timestamp, release_precision = @precision, updated_at = @now
+         WHERE id = @id`
+      )
+      .run({ id, timestamp: incoming.timestamp, precision: incoming.precision, now: Date.now() })
     return info.changes > 0
   }
 
@@ -496,6 +527,7 @@ export interface EpisodeRow {
   media_length: number | null
   duration_secs: number | null
   release_date: number | null
+  release_precision: string | null
   episode_number: number | null
   season_number: number | null
   artwork_url: string | null

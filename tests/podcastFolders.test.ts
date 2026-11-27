@@ -91,7 +91,9 @@ describe('podcast folder migration', () => {
     runMigrations(db)
 
     expect(db.prepare('SELECT * FROM podcasts ORDER BY id').all()).toEqual(podcastsBefore)
-    expect(db.prepare('SELECT * FROM episodes').all()).toEqual(episodesBefore)
+    const episodesAfter = db.prepare('SELECT * FROM episodes').all() as Record<string, unknown>[]
+    expect(episodesAfter.map(({ release_precision: _precision, ...row }) => row)).toEqual(episodesBefore)
+    expect(episodesAfter.every((row) => row.release_precision == null)).toBe(true)
     const feedUrl = db
       .prepare('SELECT "notnull" AS required FROM pragma_table_info(\'podcasts\') WHERE name = \'feed_url\'')
       .get() as { required: number }

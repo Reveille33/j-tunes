@@ -249,5 +249,12 @@ CREATE TABLE IF NOT EXISTS podcast_folders (
 
 CREATE INDEX IF NOT EXISTS idx_podcast_folders_podcast ON podcast_folders(podcast_id);
 `
+  },
+  {
+    version: '007_release_precision',
+    sql: `
+-- 'day', 'month', or 'year'. Null on rows written before this column existed.
+ALTER TABLE episodes ADD COLUMN release_precision TEXT;
+`
   }
 ]

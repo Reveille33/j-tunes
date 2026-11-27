@@ -155,7 +155,7 @@ export const EpisodeRow = memo(function EpisodeRow({ episode, onPlay, onRemove }
             {episode.podcastTitle}
           </span>
           <span className="dot">·</span>
-          <span>{formatDate(episode.releaseDate)}</span>
+          <span>{formatDate(episode.releaseDate, episode.releasePrecision)}</span>
           {episode.durationSecs ? (
             <>
               <span className="dot">·</span>

@@ -1,3 +1,5 @@
+import { inferPrecision, isUtcNoon, type ReleasePrecision } from './releaseDate'
+
 /** Formats a duration in seconds as `H:MM:SS` or `M:SS`. */
 export function formatDuration(seconds: number | null | undefined): string {
   if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return '--:--'
@@ -40,14 +42,25 @@ export function formatBytes(bytes: number | null | undefined): string {
   return `${value.toFixed(value < 10 && unit > 0 ? 1 : 0)} ${units[unit]}`
 }
 
-/** Formats a release date as `MMM D, YYYY`, or an em dash when unknown. */
-export function formatDate(timestamp: number | null | undefined): string {
+/**
+ * Formats a release date as `MMM D, YYYY`, or an em dash when unknown.
+ * A year-only date is the year on its own. January 1 is not invented.
+ */
+export function formatDate(
+  timestamp: number | null | undefined,
+  precision?: ReleasePrecision | null
+): string {
   if (!timestamp) return '--'
-  return new Date(timestamp).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  })
+  const resolved = precision ?? inferPrecision(timestamp)
+  if (resolved === 'year') {
+    const date = new Date(timestamp)
+    const year = inferPrecision(timestamp) === 'year' ? date.getFullYear() : date.getUTCFullYear()
+    return String(year)
+  }
+  const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short' }
+  if (resolved === 'day') options.day = 'numeric'
+  if (isUtcNoon(timestamp)) options.timeZone = 'UTC'
+  return new Date(timestamp).toLocaleDateString(undefined, options)
 }
 
 /** Formats a release date as `YYYY-MM-DD`, used for sorting comparisons. */

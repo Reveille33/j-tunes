@@ -1,5 +1,7 @@
 import { parseFile } from 'music-metadata'
+import { stat } from 'node:fs/promises'
 import { basename, extname, dirname } from 'node:path'
+import { chooseFileReleaseDate, releaseDateFromCommon, type ReleaseDate } from '@shared/releaseDate'
 import { EpisodeRepo } from '../db/repositories/episodeRepo'
 import { PodcastRepo } from '../db/repositories/podcastRepo'
 import { ImportJobRepo } from '../db/repositories/importJobRepo'
@@ -53,7 +55,10 @@ export interface FileTags {
   title: string | null
   artist: string | null
   album: string | null
-  year: number | null
+  /** Best date from the tags alone. Filename and mtime are applied separately. */
+  releaseDate: ReleaseDate | null
+  /** False when the file could not be read. mtime is not used in that case. */
+  parsed: boolean
   duration: number | null
 }
 
@@ -81,11 +86,36 @@ export async function readTags(filePath: string): Promise<FileTags> {
       title: meta.common.title ?? null,
       artist: meta.common.artist ?? null,
       album: meta.common.album ?? null,
-      year: meta.common.year ?? null,
+      releaseDate: releaseDateFromCommon(meta.common),
+      parsed: true,
       duration: meta.format.duration ?? null
     }
   } catch {
-    return { title: null, artist: null, album: null, year: null, duration: null }
+    return { title: null, artist: null, album: null, releaseDate: null, parsed: false, duration: null }
+  }
+}
+
+/**
+ * Tag date, then a single date written in the title or filename, then mtime.
+ * mtime is only used after a successful read, and never ahead of a year.
+ */
+export async function releaseDateForPath(filePath: string, tags: FileTags): Promise<ReleaseDate | null> {
+  const withoutMtime = chooseFileReleaseDate({
+    tagged: tags.releaseDate,
+    title: tags.title,
+    fileName: basename(filePath)
+  })
+  if (withoutMtime || !tags.parsed) return withoutMtime
+  try {
+    const mtimeMs = (await stat(filePath)).mtimeMs
+    return chooseFileReleaseDate({
+      tagged: tags.releaseDate,
+      title: tags.title,
+      fileName: basename(filePath),
+      mtimeMs
+    })
+  } catch {
+    return null
   }
 }
 
@@ -135,13 +165,18 @@ export class Importer {
       if (this.cancelled) break
       report(file)
 
-      // Already imported?
-      if (this.deps.episodes.findByFilePath(file)) {
+      const tags = await readTags(file)
+      const release = await releaseDateForPath(file, tags)
+
+      // Already imported. A clearer date replaces a year-only placeholder
+      // without touching play state.
+      const existing = this.deps.episodes.findByFilePath(file)
+      if (existing) {
+        if (release) this.deps.episodes.upgradeReleaseDate(existing.id, release)
         skipped += 1
         continue
       }
 
-      const tags = await readTags(file)
       const size = await fileSize(file)
       const title = tags.title || titleFromFileName(file)
 
@@ -149,6 +184,8 @@ export class Importer {
       // without a path. Repair that row before title-matching, so the file
       // is not attached to a different episode.
       if (this.deps.episodes.repairNullFilePath(`import:${file}`, file, size)) {
+        const repaired = this.deps.episodes.findByFilePath(file)
+        if (repaired && release) this.deps.episodes.upgradeReleaseDate(repaired.id, release)
         matched += 1
         continue
       }
@@ -156,6 +193,7 @@ export class Importer {
       const matchedId = this.findMatch(title, tags, index)
       if (matchedId !== null) {
         this.deps.episodes.attachFile(matchedId, file, size, tags.duration)
+        if (release) this.deps.episodes.upgradeReleaseDate(matchedId, release)
         this.consumeMatch(matchedId, title, tags, index)
         matched += 1
       } else {
@@ -170,7 +208,8 @@ export class Importer {
           mediaType: null,
           mediaLength: size,
           durationSecs: tags.duration ? Math.round(tags.duration) : null,
-          releaseDate: tags.year ? new Date(tags.year, 0, 1).getTime() : null,
+          releaseDate: release?.timestamp ?? null,
+          releasePrecision: release?.precision ?? null,
           episodeNumber: null,
           seasonNumber: null,
           artworkUrl: null,
