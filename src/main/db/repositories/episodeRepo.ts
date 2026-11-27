@@ -1,6 +1,7 @@
 import type { ReleaseDate, ReleasePrecision } from '@shared/releaseDate'
 import { inferPrecision, isClearerDate, knownPrecision } from '@shared/releaseDate'
 import type { Db } from '../connection'
+import { releaseYearSql } from '../releaseYearSql'
 import type { DownloadState, ParsedEpisode } from '@shared/types'
 
 export interface EpisodeInsert {
@@ -422,17 +423,22 @@ export class EpisodeRepo {
       .run(filePath, fileSize, Date.now(), id)
   }
 
-  /** Distinct years that have episodes, newest first - drives the year filter. */
-  listYears(): number[] {
+  /**
+   * Distinct years that have episodes, newest first.
+   * Pass a podcast id to list only that show. Null lists the whole library.
+   * The year is the one the episode row displays, including a year-only date.
+   */
+  listYears(podcastId?: number | null): number[] {
     const rows = this.db
       .prepare(
-        `SELECT DISTINCT CAST(strftime('%Y', release_date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS y
-         FROM episodes
-         WHERE release_date IS NOT NULL
+        `SELECT DISTINCT ${releaseYearSql('e')} AS y
+         FROM episodes e
+         WHERE e.release_date IS NOT NULL
+           AND (? IS NULL OR e.podcast_id = ?)
          ORDER BY y DESC`
       )
-      .all() as { y: number }[]
-    return rows.map((r) => r.y).filter((y) => Number.isFinite(y))
+      .all(podcastId ?? null, podcastId ?? null) as { y: number | null }[]
+    return rows.map((r) => r.y).filter((y): y is number => y != null && Number.isFinite(y))
   }
 
   /** Every episode of a podcast, newest first. */

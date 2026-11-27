@@ -1,7 +1,13 @@
 import { ipcMain } from 'electron'
 import { basename, extname } from 'node:path'
 import { IPC } from '@shared/ipc'
-import { episodeQuerySchema, setPlayedSchema, episodeIdSchema, bulkPlayedSchema } from '@shared/validation'
+import {
+  episodeQuerySchema,
+  setPlayedSchema,
+  episodeIdSchema,
+  bulkPlayedSchema,
+  episodeYearsSchema
+} from '@shared/validation'
 import { AUDIO_MIME_TYPES } from '@shared/constants'
 import { fetchChapters } from '../services/chapterService'
 import { authorizeLocalFile, httpMediaUrl, mediaEpisodeUrl } from '../services/mediaAccess'
@@ -19,7 +25,10 @@ export function registerEpisodeHandlers(ctx: AppContext): void {
     ctx.episodes.setPlayed(episodeId, played)
   })
 
-  ipcMain.handle(IPC.EPISODES_YEARS, () => ctx.episodes.listYears())
+  ipcMain.handle(IPC.EPISODES_YEARS, (_event, raw: unknown) => {
+    const podcastId = episodeYearsSchema.parse(raw ?? null)
+    return ctx.episodes.listYears(podcastId ?? null)
+  })
 
   /** Episodes that were started but not finished, for Continue Listening. */
   ipcMain.handle(IPC.EPISODES_IN_PROGRESS, () => ctx.search.listInProgress(8))

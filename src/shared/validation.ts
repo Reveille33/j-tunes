@@ -7,6 +7,9 @@ import { z } from 'zod'
 
 export const idSchema = z.number().int().positive()
 
+/** Optional podcast id for the year list. Null is the whole library. */
+export const episodeYearsSchema = idSchema.nullish()
+
 export const fileActionSchema = z.enum(['keep', 'trash'])
 
 export const themeSchema = z.enum(['dark', 'light'])

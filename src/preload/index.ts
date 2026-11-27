@@ -80,7 +80,8 @@ const api = {
     ipcRenderer.invoke(IPC.EPISODES_SET_PLAYED_MANY, request),
   getChapters: (episodeId: number): Promise<Chapter[]> =>
     ipcRenderer.invoke(IPC.EPISODES_CHAPTERS, { episodeId }),
-  listYears: (): Promise<number[]> => ipcRenderer.invoke(IPC.EPISODES_YEARS),
+  listYears: (podcastId?: number | null): Promise<number[]> =>
+    ipcRenderer.invoke(IPC.EPISODES_YEARS, podcastId ?? null),
   listInProgress: (): Promise<Episode[]> => ipcRenderer.invoke(IPC.EPISODES_IN_PROGRESS),
   getMediaSource: (episodeId: number): Promise<MediaSource> =>
     ipcRenderer.invoke(IPC.EPISODE_MEDIA_URL, { episodeId }),

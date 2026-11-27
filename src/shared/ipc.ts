@@ -145,7 +145,8 @@ export interface JTunesApi {
   setPlayed(episodeId: number, played: boolean): Promise<void>
   setPlayedMany(request: BulkPlayedRequest): Promise<void>
   getChapters(episodeId: number): Promise<Chapter[]>
-  listYears(): Promise<number[]>
+  /** Years with episodes. A podcast id limits the list to that show. */
+  listYears(podcastId?: number | null): Promise<number[]>
   /** Episodes that were started but not finished, newest activity first. */
   listInProgress(): Promise<Episode[]>
   getMediaSource(episodeId: number): Promise<MediaSource>
