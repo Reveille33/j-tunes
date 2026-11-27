@@ -2,6 +2,8 @@ import { realpath } from 'node:fs/promises'
 import type { EpisodeRepo } from '../db/repositories/episodeRepo'
 import type { PodcastFolderRepo } from '../db/repositories/podcastFolderRepo'
 import type { PodcastRepo } from '../db/repositories/podcastRepo'
+import type { ScanProgress } from '@shared/types'
+import { createScanProgressReporter } from '@shared/scanProgress'
 import { fileSize, listFilesRecursive, pathExists } from '../util/fsHelpers'
 import {
   isSupportedAudio,
@@ -15,6 +17,7 @@ export interface FolderScanDeps {
   episodes: EpisodeRepo
   folders: PodcastFolderRepo
   podcasts: PodcastRepo
+  onProgress?: (progress: ScanProgress) => void
 }
 
 export interface FolderScanResult {
@@ -57,56 +60,74 @@ export async function scanPodcastFolders(
       continue
     }
 
-    const files = await listFilesRecursive(folder.path, isSupportedAudio)
-    for (const file of files) {
-      let real = file
-      try {
-        real = await realpath(file)
-      } catch {
-        continue
+    const report = deps.onProgress ? createScanProgressReporter(deps.onProgress) : null
+    const progress = (event: Omit<ScanProgress, 'kind' | 'folderPath'>): void => {
+      report?.report({ kind: 'folder', folderPath: folder.path, ...event })
+    }
+    let addedHere = 0
+    try {
+      progress({ done: 0, total: 0, phase: 'counting' })
+      const files = await listFilesRecursive(folder.path, isSupportedAudio)
+      const total = files.length
+      let done = 0
+      progress({ done, total, phase: 'scanning' })
+      for (const file of files) {
+        let real = file
+        try {
+          real = await realpath(file)
+        } catch {
+          done += 1
+          progress({ done, total, phase: 'scanning' })
+          continue
+        }
+
+        const tags = await readTags(real)
+        const title = tags.title || titleFromFileName(real)
+        const size = await fileSize(real)
+        const release = await releaseDateForPath(real, tags)
+        const existing = deps.episodes.findByFilePath(real) ?? deps.episodes.findByFilePath(file)
+        if (existing) {
+          if (release) deps.episodes.upgradeReleaseDate(existing.id, release)
+        } else {
+          const key = normaliseTitle(title)
+          const matchId = key ? openByTitle.get(key) : undefined
+          const duration = tags.duration != null ? Math.round(tags.duration) : null
+
+          if (matchId != null) {
+            deps.episodes.attachFile(matchId, real, size, duration)
+            if (release) deps.episodes.upgradeReleaseDate(matchId, release)
+            openByTitle.delete(key)
+            result.matched += 1
+          } else {
+            deps.episodes.insertImported({
+              podcastId,
+              guid: `file:${real}`,
+              title: title || 'Untitled',
+              description: null,
+              descriptionHtml: null,
+              mediaUrl: null,
+              mediaType: null,
+              mediaLength: size,
+              durationSecs: duration,
+              releaseDate: release?.timestamp ?? null,
+              releasePrecision: release?.precision ?? null,
+              episodeNumber: null,
+              seasonNumber: null,
+              artworkUrl: null,
+              filePath: real,
+              fileSize: size
+            })
+            result.added += 1
+            addedHere += 1
+          }
+        }
+
+        done += 1
+        progress({ done, total, phase: 'scanning' })
       }
-
-      const tags = await readTags(real)
-      const title = tags.title || titleFromFileName(real)
-      const size = await fileSize(real)
-      const release = await releaseDateForPath(real, tags)
-      const existing = deps.episodes.findByFilePath(real) ?? deps.episodes.findByFilePath(file)
-      if (existing) {
-        if (release) deps.episodes.upgradeReleaseDate(existing.id, release)
-        continue
-      }
-
-      const key = normaliseTitle(title)
-      const matchId = key ? openByTitle.get(key) : undefined
-      const duration = tags.duration != null ? Math.round(tags.duration) : null
-
-      if (matchId != null) {
-        deps.episodes.attachFile(matchId, real, size, duration)
-        if (release) deps.episodes.upgradeReleaseDate(matchId, release)
-        openByTitle.delete(key)
-        result.matched += 1
-        continue
-      }
-
-      deps.episodes.insertImported({
-        podcastId,
-        guid: `file:${real}`,
-        title: title || 'Untitled',
-        description: null,
-        descriptionHtml: null,
-        mediaUrl: null,
-        mediaType: null,
-        mediaLength: size,
-        durationSecs: duration,
-        releaseDate: release?.timestamp ?? null,
-        releasePrecision: release?.precision ?? null,
-        episodeNumber: null,
-        seasonNumber: null,
-        artworkUrl: null,
-        filePath: real,
-        fileSize: size
-      })
-      result.added += 1
+      progress({ done: total, total, phase: 'done', added: addedHere })
+    } finally {
+      report?.dispose()
     }
   }
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { scanProgressLabel } from '@shared/scanProgress'
 import { useUiStore } from '../../state/uiStore'
 import { usePodcastStore } from '../../state/podcastStore'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
@@ -26,6 +27,7 @@ export function AddPodcastDialog({ onClose, onSubscribed }: AddPodcastDialogProp
   const [localName, setLocalName] = useState('')
   const [localFolder, setLocalFolder] = useState<string | null>(null)
   const [addingLocal, setAddingLocal] = useState(false)
+  const [scanLine, setScanLine] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const busy = subscribing || addingLocal
 
@@ -59,6 +61,13 @@ export function AddPodcastDialog({ onClose, onSubscribed }: AddPodcastDialogProp
     }
   }, [searchTerm])
 
+  useEffect(() => {
+    return window.api.onScanProgress((progress) => {
+      if (progress.kind !== 'folder') return
+      setScanLine(scanProgressLabel(progress))
+    })
+  }, [])
+
   const subscribe = async (url: string) => {
     setSubscribing(true)
     setError(null)
@@ -88,6 +97,7 @@ export function AddPodcastDialog({ onClose, onSubscribed }: AddPodcastDialogProp
   const addLocal = async () => {
     if (!localName.trim() || !localFolder) return
     setAddingLocal(true)
+    setScanLine(null)
     setError(null)
     try {
       const podcast = await window.api.addLocalPodcast(localName.trim(), localFolder)
@@ -216,6 +226,7 @@ export function AddPodcastDialog({ onClose, onSubscribed }: AddPodcastDialogProp
                 {localFolder ?? 'No folder chosen'}
               </span>
             </div>
+            {addingLocal && scanLine ? <p className="scan-progress">{scanLine}</p> : null}
             <div>
               <button
                 className="button button-primary"

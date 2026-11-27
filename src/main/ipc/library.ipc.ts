@@ -6,7 +6,7 @@ import { listeningIncrement } from '../services/listeningStats'
 import { importItunesLibraryFile, previewItunesLibraryFile } from '../services/itunesLibraryFile'
 import { buildOpml, exportableCount, parseOpml } from '../services/opml'
 import type { AppContext } from '../appContext'
-import type { ItunesLibraryPreview, OperationResult, OpmlImportSummary } from '@shared/types'
+import type { ItunesLibraryPreview, OperationResult, OpmlImportSummary, ScanProgress } from '@shared/types'
 
 export function registerLibraryHandlers(ctx: AppContext): void {
   /**
@@ -138,6 +138,7 @@ function itunesDeps(ctx: AppContext) {
     db: ctx.db,
     podcasts: ctx.podcasts,
     episodes: ctx.episodes,
-    folders: ctx.folders
+    folders: ctx.folders,
+    onProgress: (progress: ScanProgress) => ctx.emit(IPC.SCAN_PROGRESS, progress)
   }
 }

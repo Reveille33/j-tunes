@@ -2,13 +2,14 @@ import { realpath } from 'node:fs/promises'
 import type { EpisodeRepo } from '../db/repositories/episodeRepo'
 import type { PodcastFolderRepo } from '../db/repositories/podcastFolderRepo'
 import type { PodcastRepo } from '../db/repositories/podcastRepo'
-import type { Podcast } from '@shared/types'
+import type { Podcast, ScanProgress } from '@shared/types'
 import { scanPodcastFolders } from './folderScan'
 
 export interface LocalPodcastDeps {
   podcasts: PodcastRepo
   folders: PodcastFolderRepo
   episodes: EpisodeRepo
+  onProgress?: (progress: ScanProgress) => void
 }
 
 /**

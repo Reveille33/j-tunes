@@ -10,6 +10,7 @@ import { PodcastRepo } from '../src/main/db/repositories/podcastRepo'
 import { EpisodeRepo } from '../src/main/db/repositories/episodeRepo'
 import { PodcastFolderRepo } from '../src/main/db/repositories/podcastFolderRepo'
 import { scanPodcastFolders } from '../src/main/services/folderScan'
+import type { ScanProgress } from '../src/shared/types'
 import { unsubscribeTrashPlan } from '../src/main/services/sourceFolders'
 import { UpdateService } from '../src/main/services/updateService'
 import { fetchFeed } from '../src/main/services/feedService'
@@ -162,6 +163,33 @@ describe('podcast folders', () => {
     )
     expect(podcastFolderRemoveSchema.parse({ folderId: 3 })).toEqual({ folderId: 3 })
     expect(() => podcastFolderAddSchema.parse({ podcastId: 2, path: '   ' })).toThrow()
+  })
+
+  it('reports folder progress that finishes at the file count', async () => {
+    const show = podcasts.create({ feedUrl: null, title: 'Local' })
+    folders.add(show.id, dir)
+    writeFileSync(join(dir, 'One.mp3'), 'audio')
+    writeFileSync(join(dir, 'Two.mp3'), 'audio')
+    writeFileSync(join(dir, 'Three.mp3'), 'audio')
+    const events: ScanProgress[] = []
+
+    const result = await scanPodcastFolders(
+      { episodes, folders, podcasts, onProgress: (event) => events.push(event) },
+      show.id
+    )
+
+    expect(result.added).toBe(3)
+    const last = events[events.length - 1]
+    expect(last).toMatchObject({
+      kind: 'folder',
+      folderPath: dir,
+      done: 3,
+      total: 3,
+      phase: 'done',
+      added: 3
+    })
+    expect(events[0]).toMatchObject({ phase: 'counting', done: 0, total: 0 })
+    expect(events.every((event) => event.total === 0 || event.total === 3)).toBe(true)
   })
 
   it('attaches a matching file and adds the rest as imported episodes', async () => {

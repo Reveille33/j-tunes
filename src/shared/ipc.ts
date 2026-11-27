@@ -22,6 +22,7 @@ import type {
   OperationResult,
   OpmlImportProgress,
   OpmlImportSummary,
+  ScanProgress,
   PlaylistAddResult,
   PlaylistDetail,
   PlaylistSummary,
@@ -105,6 +106,7 @@ export const IPC = {
   LIBRARY_OPML_PROGRESS: 'library:opmlProgress',
   LIBRARY_ITUNES_PREVIEW: 'library:itunesPreview',
   LIBRARY_ITUNES_IMPORT: 'library:itunesImport',
+  SCAN_PROGRESS: 'library:scanProgress',
 
   // Player
   PLAYER_SAVE_POSITION: 'player:savePosition',
@@ -239,6 +241,8 @@ export interface JTunesApi {
   onImportProgress(cb: (p: ImportProgress) => void): () => void
   onImportDone(cb: (p: ImportSummary) => void): () => void
   onOpmlProgress(cb: (p: OpmlImportProgress) => void): () => void
+  /** Folder scans and iTunes imports. The return value unsubscribes. */
+  onScanProgress(cb: (p: ScanProgress) => void): () => void
 }
 
 declare global {

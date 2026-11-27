@@ -1126,9 +1126,22 @@
 
 .podcast-folder-row {
   display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.podcast-folder-main {
+  display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+.scan-progress {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .podcast-folder-path {

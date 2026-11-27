@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useUiStore } from '../../state/uiStore'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { scanProgressLabel } from '@shared/scanProgress'
 import type { ItunesImportSummary, ItunesLibraryPreview } from '@shared/types'
 
 interface ItunesImportDialogProps {
@@ -24,10 +25,18 @@ export function ItunesImportDialog({
   const [preview, setPreview] = useState<ItunesLibraryPreview | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
+  const [scanLine, setScanLine] = useState<string | null>(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
 
   useEscapeKey(onClose, (preview !== null || error !== null) && !importing)
+
+  useEffect(() => {
+    return window.api.onScanProgress((progress) => {
+      if (progress.kind !== 'itunes' || progress.phase === 'done') return
+      setScanLine(scanProgressLabel(progress))
+    })
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -53,6 +62,7 @@ export function ItunesImportDialog({
   const confirm = async (): Promise<void> => {
     if (!preview || importing) return
     setImporting(true)
+    setScanLine(null)
     setError(null)
     try {
       const result = await window.api.importItunesLibrary(preview.filePath)
@@ -105,6 +115,10 @@ export function ItunesImportDialog({
             </>
           ) : null}
 
+          {importing ? (
+            <p className="scan-progress">{scanLine ?? 'Importing…'}</p>
+          ) : null}
+
           <div className="dialog-actions">
             <button className="button" onClick={onClose} disabled={importing}>
               {preview ? 'Cancel' : 'Close'}
@@ -115,7 +129,7 @@ export function ItunesImportDialog({
                 onClick={() => void confirm()}
                 disabled={importing}
               >
-                {importing ? 'Importing…' : 'Import'}
+                {importing ? (scanLine ?? 'Importing…') : 'Import'}
               </button>
             ) : null}
           </div>

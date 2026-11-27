@@ -274,6 +274,23 @@ export interface OpmlImportSummary {
   failed: number
 }
 
+/** Live progress for a folder scan or an iTunes import. */
+export type ScanProgressKind = 'folder' | 'itunes'
+
+/** `counting` is the directory walk; `done` is the last event for that job. */
+export type ScanProgressPhase = 'counting' | 'scanning' | 'importing' | 'done'
+
+export interface ScanProgress {
+  kind: ScanProgressKind
+  /** The folder row this event belongs to. Set for folder scans. */
+  folderPath?: string
+  done: number
+  total: number
+  phase: ScanProgressPhase
+  /** Episodes inserted by this folder. Present on the final folder event. */
+  added?: number
+}
+
 /** Result of previewing or importing an iTunes library. Preview writes nothing. */
 export interface ItunesImportSummary {
   showsCreated: number
