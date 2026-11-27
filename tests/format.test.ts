@@ -84,4 +84,9 @@ describe('formatDate & formatIsoDate', () => {
     expect(formatDate(null)).toBe('--')
     expect(formatDate(undefined)).toBe('--')
   })
+
+  it('shows a year-only date as the year', () => {
+    expect(formatDate(new Date(2019, 0, 1).getTime())).toBe('2019')
+    expect(formatDate(Date.UTC(2019, 0, 1, 12), 'year')).toBe('2019')
+  })
 })

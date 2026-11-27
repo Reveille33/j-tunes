@@ -1,3 +1,4 @@
+import { knownPrecision } from '@shared/releaseDate'
 import type { Db } from '../connection'
 import type { Episode, EpisodePage, EpisodeQuery, SortBy } from '@shared/types'
 
@@ -13,6 +14,7 @@ interface SearchRow {
   media_type: string | null
   duration_secs: number | null
   release_date: number | null
+  release_precision: string | null
   episode_number: number | null
   season_number: number | null
   artwork_url: string | null
@@ -39,6 +41,7 @@ function toEpisode(row: SearchRow): Episode {
     mediaType: row.media_type,
     durationSecs: row.duration_secs,
     releaseDate: row.release_date,
+    releasePrecision: knownPrecision(row.release_precision),
     episodeNumber: row.episode_number,
     seasonNumber: row.season_number,
     artworkUrl: row.artwork_url,

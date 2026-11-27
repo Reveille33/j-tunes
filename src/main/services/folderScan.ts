@@ -3,7 +3,13 @@ import type { EpisodeRepo } from '../db/repositories/episodeRepo'
 import type { PodcastFolderRepo } from '../db/repositories/podcastFolderRepo'
 import type { PodcastRepo } from '../db/repositories/podcastRepo'
 import { fileSize, listFilesRecursive, pathExists } from '../util/fsHelpers'
-import { isSupportedAudio, normaliseTitle, readTags, titleFromFileName } from './importer'
+import {
+  isSupportedAudio,
+  normaliseTitle,
+  readTags,
+  releaseDateForPath,
+  titleFromFileName
+} from './importer'
 
 export interface FolderScanDeps {
   episodes: EpisodeRepo
@@ -60,17 +66,23 @@ export async function scanPodcastFolders(
         continue
       }
 
-      if (deps.episodes.findByFilePath(real) || deps.episodes.findByFilePath(file)) continue
-
       const tags = await readTags(real)
       const title = tags.title || titleFromFileName(real)
       const size = await fileSize(real)
+      const release = await releaseDateForPath(real, tags)
+      const existing = deps.episodes.findByFilePath(real) ?? deps.episodes.findByFilePath(file)
+      if (existing) {
+        if (release) deps.episodes.upgradeReleaseDate(existing.id, release)
+        continue
+      }
+
       const key = normaliseTitle(title)
       const matchId = key ? openByTitle.get(key) : undefined
       const duration = tags.duration != null ? Math.round(tags.duration) : null
 
       if (matchId != null) {
         deps.episodes.attachFile(matchId, real, size, duration)
+        if (release) deps.episodes.upgradeReleaseDate(matchId, release)
         openByTitle.delete(key)
         result.matched += 1
         continue
@@ -86,7 +98,8 @@ export async function scanPodcastFolders(
         mediaType: null,
         mediaLength: size,
         durationSecs: duration,
-        releaseDate: tags.year ? new Date(tags.year, 0, 1).getTime() : null,
+        releaseDate: release?.timestamp ?? null,
+        releasePrecision: release?.precision ?? null,
         episodeNumber: null,
         seasonNumber: null,
         artworkUrl: null,

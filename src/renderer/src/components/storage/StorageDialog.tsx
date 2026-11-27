@@ -241,7 +241,7 @@ export function StorageDialog({ onClose }: StorageDialogProps): React.JSX.Elemen
                     {episode.title}
                   </span>
                   <span className="storage-download-meta">
-                    {episode.podcastTitle} · {formatDate(episode.releaseDate)}
+                    {episode.podcastTitle} · {formatDate(episode.releaseDate, episode.releasePrecision)}
                   </span>
                 </span>
                 <span className="storage-download-size">{formatBytes(episode.fileSize)}</span>

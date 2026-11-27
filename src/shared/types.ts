@@ -2,6 +2,7 @@
  * Shared domain types for j-Tunes.
  * Imported by both the Electron main process and the React renderer.
  */
+import type { ReleasePrecision } from './releaseDate'
 
 /** Download lifecycle for a single episode. */
 export type DownloadState = 'none' | 'queued' | 'downloading' | 'paused' | 'done' | 'error'
@@ -52,6 +53,8 @@ export interface Episode {
   mediaType: string | null
   durationSecs: number | null
   releaseDate: number | null
+  /** How much of `releaseDate` was actually known. Null on older rows. */
+  releasePrecision: ReleasePrecision | null
   episodeNumber: number | null
   seasonNumber: number | null
   artworkUrl: string | null
