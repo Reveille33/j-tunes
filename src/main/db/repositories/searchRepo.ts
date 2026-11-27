@@ -186,8 +186,30 @@ export class SearchRepo {
     }
 
     if (filters.year != null) {
+      // The displayed year still decides membership, but each branch starts
+      // with a release_date range so the 50k-episode library uses the index
+      // instead of running the year expression on every row.
+      const bounds = yearBounds(filters.year)
       params.year = filters.year
-      where.push(`${releaseYearSql('e')} = @year`)
+      params.yearStart = bounds.start
+      params.yearEnd = bounds.end
+      params.utcYearStart = Date.UTC(filters.year, 0, 1)
+      params.utcYearEnd = Date.UTC(filters.year + 1, 0, 1)
+      const displayed = `${releaseYearSql('e')} = @year`
+      const notLocalNewYear =
+        "NOT ((e.release_date % 1000) = 0 AND strftime('%m-%d %H:%M:%S', e.release_date / 1000, 'unixepoch', 'localtime') = '01-01 00:00:00')"
+      const utcNoon =
+        "(e.release_date % 1000) = 0 AND strftime('%H:%M:%S', e.release_date / 1000, 'unixepoch') = '12:00:00'"
+      where.push(`(
+        (e.release_date >= @yearStart AND e.release_date < @yearEnd AND ${displayed})
+        OR (e.release_precision = 'year'
+            AND e.release_date >= @utcYearStart AND e.release_date < @utcYearEnd
+            AND ${notLocalNewYear}
+            AND ${displayed})
+        OR (${utcNoon}
+            AND e.release_date >= @utcYearStart AND e.release_date < @utcYearEnd
+            AND ${displayed})
+      )`)
     }
 
     if (params.played !== null) {
