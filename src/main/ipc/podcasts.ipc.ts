@@ -146,7 +146,12 @@ export function registerPodcastHandlers(ctx: AppContext): void {
   ipcMain.handle(IPC.PODCAST_ADD_LOCAL, async (_event, raw: unknown) => {
     const input = addLocalPodcastSchema.parse(raw)
     return addLocalPodcast(
-      { podcasts: ctx.podcasts, folders: ctx.folders, episodes: ctx.episodes },
+      {
+        podcasts: ctx.podcasts,
+        folders: ctx.folders,
+        episodes: ctx.episodes,
+        onProgress: (progress) => ctx.emit(IPC.SCAN_PROGRESS, progress)
+      },
       input
     )
   })

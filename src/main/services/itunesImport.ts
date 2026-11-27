@@ -1,6 +1,7 @@
 import { realpath, stat } from 'node:fs/promises'
 import { dirname, isAbsolute, relative, sep } from 'node:path'
-import type { ItunesImportSummary } from '@shared/types'
+import type { ItunesImportSummary, ScanProgress } from '@shared/types'
+import { createScanProgressReporter } from '@shared/scanProgress'
 import type { Db } from '../db/connection'
 import type { EpisodeRepo } from '../db/repositories/episodeRepo'
 import type { PodcastFolderRepo } from '../db/repositories/podcastFolderRepo'
@@ -15,6 +16,7 @@ export interface ItunesImportDeps {
   podcasts: PodcastRepo
   episodes: EpisodeRepo
   folders: PodcastFolderRepo
+  onProgress?: (progress: ScanProgress) => void
 }
 
 export type { ItunesImportSummary }
@@ -92,18 +94,34 @@ export async function importItunesLibrary(
   deps: ItunesImportDeps,
   library: ItunesLibrary
 ): Promise<ItunesImportSummary> {
-  const plan = await planItunesImport(deps, library)
-  deps.db.transaction(() => {
-    applyItunesImport(deps, plan)
-  })()
-  return plan.summary
+  const total = library.shows.reduce((sum, show) => sum + show.episodes.length, 0)
+  const report = deps.onProgress ? createScanProgressReporter(deps.onProgress) : null
+  let done = 0
+  const tick = (): void => {
+    done += 1
+    report?.report({ kind: 'itunes', done, total, phase: 'importing' })
+  }
+  try {
+    report?.report({ kind: 'itunes', done: 0, total, phase: 'importing' })
+    const plan = await planItunesImport(deps, library, tick)
+    // Let the last progress event paint before the synchronous write.
+    if (report) await new Promise((resolve) => setTimeout(resolve, 0))
+    deps.db.transaction(() => {
+      applyItunesImport(deps, plan)
+    })()
+    report?.report({ kind: 'itunes', done: total, total, phase: 'done' })
+    return plan.summary
+  } finally {
+    report?.dispose()
+  }
 }
 
 async function planItunesImport(
   deps: ItunesImportDeps,
-  library: ItunesLibrary
+  library: ItunesLibrary,
+  onTrack?: () => void
 ): Promise<ImportPlan> {
-  const resolved = await Promise.all(library.shows.map((show) => resolveShow(show)))
+  const resolved = await Promise.all(library.shows.map((show) => resolveShow(show, onTrack)))
   const folderChoices = exclusiveFolders(resolved.map((show) => show.files))
   const known: KnownShow[] = deps.podcasts.list(true).map((podcast) => ({
     id: podcast.id,
@@ -244,7 +262,8 @@ function applyItunesImport(deps: ItunesImportDeps, plan: ImportPlan): void {
 }
 
 async function resolveShow(
-  show: ItunesShow
+  show: ItunesShow,
+  onTrack?: () => void
 ): Promise<{ show: ItunesShow; episodes: ResolvedEpisode[]; files: string[] }> {
   const episodes: ResolvedEpisode[] = []
   const files: string[] = []
@@ -253,6 +272,7 @@ async function resolveShow(
     const size = filePath ? await fileSize(filePath) : 0
     episodes.push({ episode, filePath, fileSize: size })
     if (filePath) files.push(filePath)
+    onTrack?.()
   }
   return { show, episodes, files }
 }

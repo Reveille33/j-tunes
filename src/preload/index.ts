@@ -23,6 +23,7 @@ import type {
   OpmlImportProgress,
   OpmlImportSummary,
   PlaylistAddResult,
+  ScanProgress,
   PlaylistDetail,
   PlaylistSummary,
   Podcast,
@@ -185,6 +186,7 @@ const api = {
   onImportDone: (cb: (p: ImportSummary) => void) => subscribe(IPC.LIBRARY_IMPORT_DONE, cb),
   onOpmlProgress: (cb: (p: OpmlImportProgress) => void) =>
     subscribe(IPC.LIBRARY_OPML_PROGRESS, cb),
+  onScanProgress: (cb: (p: ScanProgress) => void) => subscribe(IPC.SCAN_PROGRESS, cb),
   onSettingsOpen: (cb: () => void) => subscribe(IPC.APP_OPEN_SETTINGS, cb),
 }
 
