@@ -4,6 +4,7 @@ import { useUiStore } from '../../state/uiStore'
 import { formatDate } from '../../utils/format'
 import { podcastDescriptionClamped } from '@shared/descriptionDisplay'
 import { showFeedDownloads } from '@shared/podcastFeed'
+import { scanProgressLabel } from '@shared/scanProgress'
 import type { Podcast, PodcastFolder } from '@shared/types'
 
 interface PodcastDetailProps {
@@ -33,7 +34,30 @@ export function PodcastDetail({
   const [queueingAll, setQueueingAll] = useState(false)
   const [folders, setFolders] = useState<PodcastFolder[] | null>(null)
   const [foldersBusy, setFoldersBusy] = useState(false)
+  const [scanLines, setScanLines] = useState<Record<string, string>>({})
   const hasFeed = showFeedDownloads(podcast.feedUrl)
+
+  useEffect(() => {
+    setScanLines({})
+  }, [podcast.id])
+
+  useEffect(() => {
+    return window.api.onScanProgress((progress) => {
+      if (progress.kind !== 'folder' || !progress.folderPath) return
+      const label = scanProgressLabel(progress)
+      const path = progress.folderPath
+      setScanLines((current) => {
+        if (!label) {
+          if (!(path in current)) return current
+          const next = { ...current }
+          delete next[path]
+          return next
+        }
+        if (current[path] === label) return current
+        return { ...current, [path]: label }
+      })
+    })
+  }, [])
 
   const loadFolders = async () => {
     try {
@@ -212,17 +236,22 @@ export function PodcastDetail({
             <ul className="podcast-folder-list">
               {folders.map((folder) => (
                 <li key={folder.id} className="podcast-folder-row">
-                  <span className="podcast-folder-path truncate" title={folder.path}>
-                    {folder.path}
-                  </span>
-                  <button
-                    className="button"
-                    onClick={() => void removeFolder(folder)}
-                    disabled={foldersBusy}
-                    title="Stop watching this folder. Files stay on disk."
-                  >
-                    Remove
-                  </button>
+                  <div className="podcast-folder-main">
+                    <span className="podcast-folder-path truncate" title={folder.path}>
+                      {folder.path}
+                    </span>
+                    <button
+                      className="button"
+                      onClick={() => void removeFolder(folder)}
+                      disabled={foldersBusy}
+                      title="Stop watching this folder. Files stay on disk."
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  {scanLines[folder.path] ? (
+                    <p className="scan-progress">{scanLines[folder.path]}</p>
+                  ) : null}
                 </li>
               ))}
             </ul>

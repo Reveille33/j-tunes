@@ -9,6 +9,7 @@ import { EpisodeRepo, type EpisodeInsert } from '../src/main/db/repositories/epi
 import { PodcastFolderRepo } from '../src/main/db/repositories/podcastFolderRepo'
 import { importItunesLibrary, previewItunesImport } from '../src/main/services/itunesImport'
 import type { ItunesEpisode, ItunesLibrary, ItunesShow } from '../src/main/services/itunesLibrary'
+import type { ScanProgress } from '../src/shared/types'
 
 function show(over: Partial<ItunesShow> & Pick<ItunesShow, 'name' | 'episodes'>): ItunesShow {
   return { author: null, feedUrl: null, ...over }
@@ -410,5 +411,29 @@ describe('iTunes library import', () => {
     expect(podcasts.list()).toHaveLength(0)
     expect(db.prepare('SELECT COUNT(*) AS n FROM episodes').get()).toEqual({ n: 0 })
     expect(folderPaths()).toEqual([])
+  })
+
+  it('reports track progress and still writes in one transaction', async () => {
+    const events: ScanProgress[] = []
+    const parsed = library([
+      show({
+        name: 'Alpha',
+        episodes: Array.from({ length: 12 }, (_, index) =>
+          episode({ guid: `itunes:${index}`, title: `Track ${index}` })
+        )
+      })
+    ])
+
+    const summary = await importItunesLibrary(
+      { ...deps(), onProgress: (event) => events.push(event) },
+      parsed
+    )
+
+    expect(summary.episodesCreated).toBe(12)
+    expect(events[0]).toMatchObject({ kind: 'itunes', done: 0, total: 12, phase: 'importing' })
+    const last = events[events.length - 1]
+    expect(last).toMatchObject({ kind: 'itunes', done: 12, total: 12, phase: 'done' })
+    expect(events.filter((event) => event.phase !== 'done').length).toBeLessThan(12)
+    expect(podcasts.list()).toHaveLength(1)
   })
 })

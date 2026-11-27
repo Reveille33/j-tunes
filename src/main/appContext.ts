@@ -17,6 +17,7 @@ import { autoDownloadEnabled } from './services/initialDownload'
 import { scanPodcastFolders } from './services/folderScan'
 import { OpmlImportService } from './services/opmlImportService'
 import { defaultDownloadDir } from './util/paths'
+import { IPC } from '@shared/ipc'
 import type { AppSettings, DownloadQueueItem, UpdateProgress } from '@shared/types'
 
 /**
@@ -75,7 +76,12 @@ export class AppContext {
       onProgress: (progress: UpdateProgress) => this.emit('updates:progress', progress),
       scanFolders: (podcastId) =>
         scanPodcastFolders(
-          { episodes: this.episodes, folders: this.folders, podcasts: this.podcasts },
+          {
+            episodes: this.episodes,
+            folders: this.folders,
+            podcasts: this.podcasts,
+            onProgress: (progress) => this.emit(IPC.SCAN_PROGRESS, progress)
+          },
           podcastId
         ),
       onNewEpisodes: (podcast, episodeIds) => {
